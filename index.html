@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>初中语文教师·班主任一体化工作台</title>
+<style>
+/* ===== Reset & Variables ===== */
+:root{
+  --blue:#007AFF;--blue-light:#5AC8FA;--blue-dark:#0051D5;--blue-bg:#EAF2FF;
+  --green:#34C759;--orange:#FF9500;--red:#FF3B30;--purple:#5856D6;--teal:#5AC8FA;
+  --bg:#F0F2F5;--card:#FFFFFF;--text:#1D1D1F;--text2:#86868B;--text3:#C7C7CC;
+  --border:#E5E5EA;--sidebar-bg:#FFFFFF;--sidebar-active:#EAF2FF;
+  --radius:14px;--radius-lg:20px;--shadow:0 2px 12px rgba(0,0,0,.06);--shadow-lg:0 8px 32px rgba(0,0,0,.12);
+  --font:-apple-system,"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+.icon-svg{vertical-align:middle;flex-shrink:0;display:inline-block}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--bg);color:var(--text);font-size:14px;line-height:1.6;overflow:hidden}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-thumb{background:#D1D1D6;border-radius:3px}
+::-webkit-scrollbar-track{background:transparent}
+
+/* ===== Setup Modal ===== */
+.setup-overlay{position:fixed;inset:0;background:rgba(0,0,40,.45);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:9999;animation:fadeIn .3s}
+.setup-card{background:#fff;border-radius:24px;padding:40px;max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);animation:slideUp .4s ease}
+.setup-card h2{font-size:22px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.setup-card .sub{color:var(--text2);font-size:14px;margin-bottom:28px}
+.setup-field{margin-bottom:20px}
+.setup-field label{display:block;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.setup-field select,.setup-field input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:15px;font-family:var(--font);transition:border .2s;outline:none}
+.setup-field select:focus,.setup-field input:focus{border-color:var(--blue)}
+.setup-segment{display:flex;gap:8px}
+.setup-segment button{flex:1;padding:10px;border:1.5px solid var(--border);border-radius:10px;background:#fff;font-size:14px;font-family:var(--font);cursor:pointer;transition:all .2s}
+.setup-segment button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.setup-btn{width:100%;padding:14px;background:var(--blue);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:600;font-family:var(--font);cursor:pointer;transition:background .2s;margin-top:8px}
+.setup-btn:hover{background:var(--blue-dark)}
+
+/* ===== Layout ===== */
+.app{display:flex;height:100vh}
+.sidebar{width:240px;background:var(--sidebar-bg);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:20px 18px 14px;border-bottom:1px solid var(--border)}
+.sidebar-header .logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:700;color:var(--text)}
+.sidebar-header .logo .dot{width:32px;height:32px;background:linear-gradient(135deg,var(--blue),var(--blue-light));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sidebar-header .info{font-size:11px;color:var(--text2);margin-top:6px;padding-left:42px}
+.sidebar-nav{flex:1;overflow-y:auto;padding:10px 8px}
+.nav-group{margin-bottom:8px}
+.nav-group-title{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;padding:8px 12px 4px;letter-spacing:.5px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;font-size:14px;color:var(--text);transition:all .15s;margin-bottom:2px}
+.nav-item:hover{background:#F5F5FA}
+.nav-item.active{background:var(--sidebar-active);color:var(--blue);font-weight:600}
+.nav-item .icon{width:20px;height:20px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+.nav-item .icon-svg{width:18px;height:18px}
+.sidebar-footer{padding:10px 8px;border-top:1px solid var(--border)}
+.sidebar-footer .nav-item{font-size:13px;color:var(--text2)}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{height:56px;background:rgba(255,255,255,.8);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 24px;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.topbar-left h1{font-size:17px;font-weight:600}
+.topbar-left .week-badge{background:var(--blue-bg);color:var(--blue);font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.topbar-date{font-size:13px;color:var(--text2)}
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+
+/* ===== Components ===== */
+.section-title{font-size:18px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.section-title .actions{margin-left:auto;display:flex;gap:8px}
+.card{background:var(--card);border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:20px;margin-bottom:16px}
+.card-title{font-size:15px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.card-title .icon-svg{color:var(--text2)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;border:none;font-size:13px;font-weight:600;font-family:var(--font);cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--blue);color:#fff}
+.btn-primary:hover{background:var(--blue-dark)}
+.btn-secondary{background:var(--blue-bg);color:var(--blue)}
+.btn-secondary:hover{background:#D6E4FF}
+.btn-outline{background:#fff;border:1.5px solid var(--border);color:var(--text)}
+.btn-outline:hover{border-color:var(--blue);color:var(--blue)}
+.btn-danger{background:#FFF0F0;color:var(--red)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-lg{padding:12px 24px;font-size:15px}
+.btn-green{background:#E8F8EC;color:var(--green)}
+.btn-orange{background:#FFF3E0;color:var(--orange)}
+.btn-purple{background:#F0EDFF;color:var(--purple)}
+
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:16px}
+.stat-card{background:var(--card);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.stat-card .stat-icon{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.stat-card .stat-label{font-size:12px;color:var(--text2);margin-bottom:6px}
+.stat-card .stat-value{font-size:28px;font-weight:700;letter-spacing:-1px}
+.stat-card .stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+
+.quick-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.quick-btn{background:#fff;border-radius:var(--radius);padding:18px 12px;text-align:center;cursor:pointer;box-shadow:var(--shadow);transition:all .2s;border:1.5px solid transparent}
+.quick-btn:hover{border-color:var(--blue);transform:translateY(-2px)}
+.quick-btn .qi{width:40px;height:40px;border-radius:12px;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.quick-btn .qt{font-size:13px;font-weight:600}
+
+table{width:100%;border-collapse:collapse}
+.tbl{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden}
+.tbl table{width:100%}
+.tbl th{background:#F8F9FA;font-size:12px;font-weight:600;color:var(--text2);text-align:left;padding:10px 14px;white-space:nowrap}
+.tbl td{padding:10px 14px;border-top:1px solid var(--border);font-size:13px}
+.tbl tr:hover td{background:#FAFBFC}
+.tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.tag-blue{background:var(--blue-bg);color:var(--blue)}
+.tag-green{background:#E8F8EC;color:var(--green)}
+.tag-orange{background:#FFF3E0;color:var(--orange)}
+.tag-red{background:#FFF0F0;color:var(--red)}
+.tag-purple{background:#F0EDFF;color:var(--purple)}
+.tag-gray{background:#F5F5FA;color:var(--text2)}
+
+.input,.select,textarea{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;font-family:var(--font);outline:none;transition:border .2s}
+.input:focus,.select:focus,textarea:focus{border-color:var(--blue)}
+textarea{resize:vertical;min-height:60px}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:13px;font-weight:600;color:var(--text2);margin-bottom:5px}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,30,.4);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn .2s}
+.modal{background:#fff;border-radius:20px;padding:28px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:slideUp .3s}
+.modal-sm{max-width:420px}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:18px}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid .full{grid-column:1/-1}
+
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px}
+.empty .ei{font-size:36px;margin-bottom:8px;opacity:.5}
+.empty .ei .icon-svg{stroke:var(--text3);width:36px;height:36px}
+
+.toast{position:fixed;top:24px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;padding:10px 20px;border-radius:10px;font-size:14px;z-index:9999;animation:slideDown .3s;backdrop-filter:blur(10px)}
+
+.filter-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.filter-bar select,.filter-bar input{width:auto;min-width:140px}
+
+/* Schedule Grid */
+.schedule-wrap{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;overflow-x:auto}
+.schedule-grid{width:100%;border-collapse:collapse;min-width:700px}
+.schedule-grid th,.schedule-grid td{border:1px solid var(--border);text-align:center;padding:0}
+.schedule-grid th{background:#F8F9FA;padding:10px 6px;font-size:12px;font-weight:600;color:var(--text2)}
+.schedule-grid .time-col{width:90px;background:#FAFBFC;font-size:11px;color:var(--text2);padding:8px 4px}
+.schedule-grid .cell{height:62px;padding:4px;cursor:pointer;transition:background .15s;position:relative;font-size:12px;vertical-align:top}
+.schedule-grid .cell:hover{background:#F5F8FF}
+.schedule-grid .cell.has-class{background:var(--blue-bg)}
+.schedule-grid .cell.chinese{background:#EAF2FF;border-color:#B3D4FF}
+.schedule-grid .cell.chinese .subj{color:var(--blue);font-weight:700}
+.schedule-grid .cell .subj{font-size:13px;font-weight:600}
+.schedule-grid .cell .meta{font-size:10px;color:var(--text2);margin-top:2px}
+.schedule-grid .cell .badge-exp{position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:var(--orange)}
+.schedule-grid .lunch-row td{background:#FFFBE6;font-size:12px;color:var(--orange);font-weight:600;padding:6px;text-align:center}
+.schedule-grid .activity-row td{background:#F0FAF0;font-size:12px;color:var(--green);font-weight:600;padding:6px;text-align:center}
+
+/* Charts */
+.chart-wrap{position:relative;height:240px}
+.chart-wrap canvas{max-height:240px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:16px;background:#fff;padding:4px;border-radius:12px;box-shadow:var(--shadow);width:fit-content}
+.tab{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--text2);transition:all .15s;border:none;background:none;font-family:var(--font)}
+.tab.active{background:var(--blue);color:#fff}
+
+.checkbox{display:flex;align-items:center;gap:6px;cursor:pointer}
+.checkbox input{width:16px;height:16px}
+
+.note{font-size:12px;color:var(--text2);padding:8px 12px;background:#F8F9FA;border-radius:8px}
+
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideDown{from{opacity:0;transform:translate(-50%,-20px)}to{opacity:1;transform:translate(-50%,0)}}
+
+/* Progress bar */
+.progress{height:6px;background:#F0F0F0;border-radius:3px;overflow:hidden;margin-top:4px}
+.progress span{display:block;height:100%;background:var(--blue);border-radius:3px;transition:width .3s}
+
+.list-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:#F8F9FA;margin-bottom:6px}
+.list-item .li-main{flex:1}
+.list-item .li-title{font-size:14px;font-weight:600}
+.list-item .li-sub{font-size:12px;color:var(--text2)}
+
+/* Student card */
+.student-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+.student-card{background:#fff;border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);cursor:pointer;transition:all .2s;border:1.5px solid transparent}
+.student-card:hover{border-color:var(--blue);transform:translateY(-2px)}
+.student-card .avatar{width:40px;height:40px;border-radius:50%;background:var(--blue-bg);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;margin-bottom:8px}
+.student-card .sn{font-size:14px;font-weight:600}
+.student-card .si{font-size:12px;color:var(--text2)}
+
+</style>
+</head>
+<body>
+
+<!-- Setup Modal -->
+<div class="setup-overlay" id="setupOverlay" style="display:none">
+  <div class="setup-card">
+    <h2><svg class="icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--blue);vertical-align:middle;margin-right:6px"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>工作台初始化</h2>
+    <p class="sub">请设置本学期基础信息，所有"第几周"将以此为准</p>
+    <div class="form-grid">
+      <div class="form-row">
+        <label>本学期年级</label>
+        <select id="setupGrade" class="select">
+          <option value="六年级">六年级</option>
+          <option value="七年级">七年级</option>
+          <option value="八年级">八年级</option>
+          <option value="九年级">九年级</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>学期类型</label>
+        <div class="setup-segment" id="setupSemester">
+          <button class="active" data-val="上学期">上学期</button>
+          <button data-val="下学期">下学期</button>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>教学周数</label>
+        <select id="setupWeeks" class="select">
+          <option value="18">18周</option>
+          <option value="20" selected>20周</option>
+          <option value="21">21周</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>开学日期</label>
+        <input type="date" id="setupStartDate" class="input">
+      </div>
+    </div>
+    <button class="setup-btn" onclick="completeSetup()">进入工作台</button>
+  </div>
+</div>
+
+<!-- Main App -->
+<div class="app" id="app" style="display:none">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="dot"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div>
+        <span>语文教师工作台</span>
+      </div>
+      <div class="info" id="sidebarInfo">加载中…</div>
+    </div>
+    <nav class="sidebar-nav" id="navContainer">
+      <div class="nav-group">
+        <div class="nav-group-title">语文教学</div>
+        <div class="nav-item active" data-view="dashboard"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span>教学仪表盘</div>
+        <div class="nav-item" data-view="reflection"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>课后反思</div>
+        <div class="nav-item" data-view="homework"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></span>作业管理</div>
+        <div class="nav-item" data-view="grades"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>成绩分析</div>
+        <div class="nav-item" data-view="todos"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>学科待办</div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">班主任工作</div>
+        <div class="nav-item" data-view="students"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>学生名单</div>
+        <div class="nav-item" data-view="classroster"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>班级管理</div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-group-title">课表管理</div>
+        <div class="nav-item" data-view="schedule-dashboard"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>课表总览</div>
+        <div class="nav-item" data-view="personal-schedule"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>个人课表</div>
+        <div class="nav-item" data-view="class-schedule"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>班级课表</div>
+        <div class="nav-item" data-view="swap"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>调课管理</div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="nav-item" onclick="openSettings()"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>基础设置</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 id="pageTitle">教学仪表盘</h1>
+        <span class="week-badge" id="weekBadge">第—周</span>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-date" id="todayDate"></span>
+      </div>
+    </header>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+
+<!-- Generic Modal Container -->
+<div id="modalContainer"></div>
+<div id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+(function(){
+'use strict';
+
+/* ===== State ===== */
+var STORAGE_KEY='teacher_workspace_v1';
+var state={
+  settings:{grade:'六年级',semester:'上学期',teachingWeeks:20,startDate:''},
+  students:[],
+  reflections:[],
+  homework:[],
+  exams:[],
+  todos:[],
+  personalSchedule:[],
+  classSchedule:[],
+  swapClasses:[]
+};
+
+var currentView='dashboard';
+var chartInstances={};
+
+/* ===== Persistence ===== */
+function saveState(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}catch(e){console.warn('save failed',e)}
+}
+function loadState(){
+  try{
+    var s=localStorage.getItem(STORAGE_KEY);
+    if(s){state=JSON.parse(s)}
+  }catch(e){console.warn('load failed',e)}
+}
+
+/* ===== Utilities ===== */
+function getCurrentWeek(){
+  if(!state.settings.startDate)return 1;
+  var start=new Date(state.settings.startDate);
+  var now=new Date();
+  var days=Math.floor((now-start)/(86400000));
+  if(days<0)return 0;
+  var week=Math.floor(days/7)+1;
+  var max=parseInt(state.settings.teachingWeeks)||20;
+  return Math.min(week,max);
+}
+function formatDate(d){
+  if(!d)return '';
+  var dt=new Date(d);
+  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+}
+function todayStr(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function weekDayStr(dateStr){
+  if(!dateStr)return '';
+  var d=new Date(dateStr);
+  return '周'+['日','一','二','三','四','五','六'][d.getDay()];
+}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+function toast(msg){
+  var div=document.createElement('div');
+  div.className='toast';
+  div.textContent=msg;
+  document.getElementById('toastContainer').appendChild(div);
+  setTimeout(function(){div.remove()},2500);
+}
+function $(s){return document.querySelector(s)}
+function escapeHtml(s){if(s==null)return'';return String(s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+/* ===== Icon Library (Feather/Lucide style outline icons) ===== */
+var ICONS={
+  dashboard:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  reflection:'<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  homework:'<path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>',
+  grades:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  todos:'<polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  students:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  class2:'<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="9" y1="12" x2="9.01" y2="12"/><line x1="9" y1="15" x2="9.01" y2="15"/><line x1="9" y1="18" x2="9.01" y2="18"/>',
+  calendar:'<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
+  user:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  swap:'<polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  flame:'<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  bell:'<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+  award:'<circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>',
+  alert:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
+  plus:'<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>',
+  edit:'<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>',
+  trash:'<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>',
+  search:'<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
+  x:'<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>',
+  check:'<polyline points="20 6 9 17 4 12"/>',
+  zap:'<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>',
+  image:'<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>',
+  save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>',
+  arrow_right:'<line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>',
+  arrow_left:'<line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>',
+  chevron_right:'<polyline points="9 18 15 12 9 6"/>',
+  printer:'<polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+  list:'<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>',
+  more:'<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  info:'<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>',
+  heart:'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+  star:'<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  bookmark:'<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>',
+  trend_up:'<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>',
+  package:'<line x1="16.5" y1="9.4" x2="7.5" y2="4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+  activity:'<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>',
+  pie:'<path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/>',
+  layers:'<polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/>',
+  sliders:'<line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>',
+  message:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>',
+  refresh:'<polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>'
+};
+function icon(name,size){
+  size=size||18;
+  var path=ICONS[name]||'';
+  return '<svg class="icon-svg" width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+path+'</svg>';
+}
+
+/* ===== Navigation ===== */
+function navigateTo(view){
+  currentView=view;
+  document.querySelectorAll('.nav-item').forEach(function(n){
+    n.classList.toggle('active',n.dataset.view===view)
+  });
+  var titles={
+    'dashboard':'教学仪表盘','reflection':'课后反思','homework':'作业管理',
+    'grades':'成绩分析','todos':'学科待办备忘','students':'学生名单管理',
+    'classroster':'班级管理','schedule-dashboard':'课表总览',
+    'personal-schedule':'个人授课课表','class-schedule':'班级全局课表','swap':'调课管理'
+  };
+  $('#pageTitle').textContent=titles[view]||'';
+  // Destroy charts
+  Object.keys(chartInstances).forEach(function(k){if(chartInstances[k]){chartInstances[k].destroy();delete chartInstances[k]}})
+  renderView(view);
+}
+// Expose to window so inline onclick handlers can call it
+window.navigateTo=navigateTo;
+function renderView(view){
+  var c=$('#content');
+  c.innerHTML='';
+  switch(view){
+    case 'dashboard':renderDashboard(c);break;
+    case 'reflection':renderReflection(c);break;
+    case 'homework':renderHomework(c);break;
+    case 'grades':renderGrades(c);break;
+    case 'todos':renderTodos(c);break;
+    case 'students':renderStudents(c);break;
+    case 'classroster':renderClassRoster(c);break;
+    case 'schedule-dashboard':renderScheduleDashboard(c);break;
+    case 'personal-schedule':renderPersonalSchedule(c);break;
+    case 'class-schedule':renderClassSchedule(c);break;
+    case 'swap':renderSwap(c);break;
+  }
+}
+
+/* ===== Setup ===== */
+function checkFirstRun(){
+  if(!state.settings.startDate){
+    showSetupModal();
+  }else{
+    initApp();
+  }
+}
+function showSetupModal(){
+  $('#setupOverlay').style.display='flex';
+  // Default to today or Sept 1
+  var now=new Date();
+  var defaultDate=now.getFullYear()+'-09-01';
+  if(now.getMonth()>=8){defaultDate=now.getFullYear()+'-09-01'}else{defaultDate=(now.getFullYear()-1)+'-09-01'}
+  $('#setupStartDate').value=defaultDate;
+}
+window.completeSetup=function(){
+  var sem=$('#setupSemester').querySelector('.active').dataset.val;
+  state.settings.grade=$('#setupGrade').value;
+  state.settings.semester=sem;
+  state.settings.teachingWeeks=parseInt($('#setupWeeks').value);
+  state.settings.startDate=$('#setupStartDate').value;
+  saveState();
+  $('#setupOverlay').style.display='none';
+  initApp();
+  toast('工作台初始化完成');
+};
+// Segment buttons
+document.querySelectorAll('#setupSemester button').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('#setupSemester button').forEach(function(x){x.classList.remove('active')});
+    b.classList.add('active');
+  });
+});
+
+function initApp(){
+  $('#app').style.display='flex';
+  updateSidebarInfo();
+  updateTopbar();
+  navigateTo('dashboard');
+}
+function updateSidebarInfo(){
+  var s=state.settings;
+  $('#sidebarInfo').textContent=s.grade+' · '+s.semester+' · '+s.teachingWeeks+'周';
+}
+function updateTopbar(){
+  var w=getCurrentWeek();
+  $('#weekBadge').textContent=w>0?'第'+w+'周':'未开学';
+  var d=new Date();
+  var wd='周'+['日','一','二','三','四','五','六'][d.getDay()];
+  $('#todayDate').textContent=d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日 '+wd;
+}
+window.openSettings=function(){
+  // Reuse setup modal for editing
+  $('#setupGrade').value=state.settings.grade;
+  document.querySelectorAll('#setupSemester button').forEach(function(b){
+    b.classList.toggle('active',b.dataset.val===state.settings.semester)
+  });
+  $('#setupWeeks').value=state.settings.teachingWeeks;
+  $('#setupStartDate').value=state.settings.startDate;
+  $('#setupOverlay').style.display='flex';
+};
+
+/* ===== Modal Helpers ===== */
+function showModal(html){
+  $('#modalContainer').innerHTML='<div class="modal-overlay" onclick="if(event.target===this)this.parentElement.remove()"><div class="modal">'+html+'</div></div>';
+}
+function closeModal(){
+  $('#modalContainer').innerHTML='';
+}
+
+/* ===== Dashboard ===== */
+function renderDashboard(c){
+  var avgScore=calcAvgScore();
+  var hwRate=calcHwRate();
+  var pendingGrading=calcPendingGrading();
+  var highFreqErrors=calcHighFreqErrors();
+  var tutoringList=getTutoringList();
+  var upcomingExams=getUpcomingExams();
+  var totalStudents=state.students.length;
+
+  c.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('trend_up',20)}</div>
+        <div class="stat-label">语文平均分</div>
+        <div class="stat-value" style="color:var(--blue)">${avgScore.score||'—'}</div>
+        <div class="stat-sub">${state.settings.grade} · ${state.students.length}人</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#E8F8EC;color:var(--green)">${icon('todos',20)}</div>
+        <div class="stat-label">作业完成率</div>
+        <div class="stat-value" style="color:var(--green)">${hwRate}%</div>
+        <div class="stat-sub">本周作业提交情况</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#FFF3E0;color:var(--orange)">${icon('clock',20)}</div>
+        <div class="stat-label">待批改任务</div>
+        <div class="stat-value" style="color:var(--orange)">${pendingGrading.count}</div>
+        <div class="stat-sub">${pendingGrading.detail||'暂无待批改'}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#FFF0F0;color:var(--red)">${icon('flame',20)}</div>
+        <div class="stat-label">高频错题</div>
+        <div class="stat-value" style="color:var(--red)">${highFreqErrors.count}</div>
+        <div class="stat-sub">${highFreqErrors.detail||'暂无统计'}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#F0EDFF;color:var(--purple)">${icon('target',20)}</div>
+        <div class="stat-label">培优补差名单</div>
+        <div class="stat-value" style="color:var(--purple)">${tutoringList.length}</div>
+        <div class="stat-sub">需重点关注学生</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('calendar',20)}</div>
+        <div class="stat-label">近期测试</div>
+        <div class="stat-value" style="color:var(--blue);font-size:20px">${upcomingExams||'暂无'}</div>
+        <div class="stat-sub">即将到来的测试</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${icon('zap',16)} 快捷入口</div>
+      <div class="quick-grid">
+        <div class="quick-btn" onclick="navigateTo('reflection')"><div class="qi" style="background:var(--blue-bg);color:var(--blue)">${icon('reflection',22)}</div><div class="qt">课后反思</div></div>
+        <div class="quick-btn" onclick="navigateTo('homework')"><div class="qi" style="background:#E8F8EC;color:var(--green)">${icon('homework',22)}</div><div class="qt">作业管理</div></div>
+        <div class="quick-btn" onclick="navigateTo('grades')"><div class="qi" style="background:#FFF3E0;color:var(--orange)">${icon('trend_up',22)}</div><div class="qt">成绩分析</div></div>
+        <div class="quick-btn" onclick="navigateTo('todos')"><div class="qi" style="background:#F0EDFF;color:var(--purple)">${icon('todos',22)}</div><div class="qt">学科待办</div></div>
+        <div class="quick-btn" onclick="navigateTo('students')"><div class="qi" style="background:var(--blue-bg);color:var(--blue)">${icon('students',22)}</div><div class="qt">学生名单</div></div>
+        <div class="quick-btn" onclick="navigateTo('schedule-dashboard')"><div class="qi" style="background:#E8F8EC;color:var(--green)">${icon('calendar',22)}</div><div class="qt">课表总览</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${icon('trend_up',16)} 近期成绩趋势</div>
+      <div class="chart-wrap"><canvas id="dashChart1"></canvas></div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-title">${icon('target',16)} 培优补差名单</div>
+        ${tutoringList.length?tutoringList.map(function(s){
+          var st=state.students.find(function(x){return x.id===s.studentId});
+          return '<div class="list-item"><div class="avatar" style="width:32px;height:32px;border-radius:50%;background:'+(s.type==='培优'?'#F0EDFF':'#FFF0F0')+';color:'+(s.type==='培优'?'var(--purple)':'var(--red)')+';display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">'+(st?escapeHtml(st.name.charAt(0)):'?')+'</div><div class="li-main"><div class="li-title">'+(st?escapeHtml(st.name):'未知')+'</div><div class="li-sub">'+s.type+' · '+s.reason+'</div></div><span class="tag '+(s.type==='培优'?'tag-purple':'tag-red')+'">'+s.type+'</span></div>'
+        }).join(''):'<div class="empty"><div class="ei">'+icon('file',36)+'</div>暂无培优补差记录</div>'}
+      </div>
+      <div class="card">
+        <div class="card-title">${icon('todos',16)} 近期待办事项</div>
+        ${(state.todos.filter(function(t){return!t.completed}).slice(0,5)).map(function(t){
+          return '<div class="list-item"><div class="li-main"><div class="li-title">'+escapeHtml(t.title)+'</div><div class="li-sub">'+escapeHtml(t.type)+' · '+formatDate(t.date)+'</div></div><span class="tag '+getTodoTagClass(t.type)+'">'+getTodoTagClass(t.type).replace('tag-','')+'</span></div>'
+        }).join('')||'<div class="empty"><div class="ei">'+icon('file',36)+'</div>暂无待办事项</div>'}
+      </div>
+    </div>
+  `;
+
+  // Render chart
+  var exams=state.exams.filter(function(e){return e.scores&&e.scores.length}).sort(function(a,b){return new Date(a.date)-new Date(b.date)});
+  if(exams.length){
+    var ctx=document.getElementById('dashChart1').getContext('2d');
+    var labels=exams.map(function(e){return e.name});
+    var avgs=exams.map(function(e){
+      var scores=e.scores.map(function(s){return parseFloat(s.score)||0});
+      return scores.length?(scores.reduce(function(a,b){return a+b},0)/scores.length).toFixed(1):0;
+    });
+    chartInstances.dash1=new Chart(ctx,{
+      type:'line',
+      data:{labels:labels,datasets:[{label:'班级均分',data:avgs,borderColor:'#007AFF',backgroundColor:'rgba(0,122,255,.1)',fill:true,tension:.3}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,min:0,max:100}}}
+    });
+  }
+}
+
+function calcAvgScore(){
+  var exams=state.exams.filter(function(e){return e.scores&&e.scores.length>0});
+  if(!exams.length)return{score:'—'};
+  var latest=exams[exams.length-1];
+  var scores=latest.scores.map(function(s){return parseFloat(s.score)||0});
+  var avg=scores.length?(scores.reduce(function(a,b){return a+b},0)/scores.length).toFixed(1):'—';
+  return{score:avg,exam:latest.name};
+}
+function calcHwRate(){
+  var recent=state.homework.slice(-5);
+  if(!recent.length)return 0;
+  var total=0,submitted=0;
+  recent.forEach(function(h){
+    if(h.submissions&&h.submissions.length){
+      h.submissions.forEach(function(s){total++;if(s.completed)submitted++})
+    }
+  });
+  return total?Math.round(submitted/total*100):0;
+}
+function calcPendingGrading(){
+  var pending=state.homework.filter(function(h){return h.submissions&&h.submissions.some(function(s){return s.completed&&!s.scored})});
+  return{count:pending.length,detail:pending.length?pending[0].title:'暂无待批改'};
+}
+function calcHighFreqErrors(){
+  var errors={};
+  state.homework.forEach(function(h){
+    if(h.errors){h.errors.forEach(function(e){errors[e]=(errors[e]||0)+1})}
+  });
+  var sorted=Object.keys(errors).sort(function(a,b){return errors[b]-errors[a]}).slice(0,3);
+  return{count:sorted.length,detail:sorted.length?sorted.map(function(e){return e+'('+errors[e]+'次)'}).join('、'):'暂无错题统计'};
+}
+function getTutoringList(){
+  var list=[];
+  state.students.forEach(function(s){
+    if(s.level==='培优'||s.level==='补差'){list.push({studentId:s.id,type:s.level,reason:s.notes||''})}
+  });
+  return list;
+}
+function getUpcomingExams(){
+  var today=todayStr();
+  var upcoming=state.exams.filter(function(e){return e.date>=today}).sort(function(a,b){return a.date.localeCompare(b.date)});
+  if(!upcoming.length)return'';
+  var e=upcoming[0];
+  var d=new Date(e.date);
+  var diff=Math.ceil((d-new Date(today))/(86400000));
+  return e.name+'('+diff+'天后)';
+}
+function getTodoTagClass(type){
+  var map={'备课':'tag-blue','命题':'tag-orange','教研':'tag-purple','听课':'tag-green','其他':'tag-gray'};
+  return map[type]||'tag-gray';
+}
+
+/* ===== Reflection ===== */
+function renderReflection(c){
+  c.innerHTML=`
+    <div class="filter-bar">
+      <select class="select" id="refClassFilter" style="min-width:120px">
+        <option value="">全部班级</option>
+        <option value="1班">1班</option>
+        <option value="2班">2班</option>
+      </select>
+      <select class="select" id="refSemesterFilter" style="min-width:120px">
+        <option value="">全部学期</option>
+        <option value="${state.settings.semester}">本学期</option>
+      </select>
+      <button class="btn btn-primary" onclick="showReflectionModal()">+ 新增反思</button>
+      <button class="btn btn-outline" onclick="exportReflectionsWord()">⬇ 导出Word</button>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>日期</th><th>班级</th><th>课时</th><th>授课进度</th><th>课堂问题</th><th>教学反思</th><th>操作</th></tr></thead>
+        <tbody id="refTableBody"></tbody>
+      </table>
+    </div>
+  `;
+  renderRefTable();
+}
+function renderRefTable(){
+  var cls=$('#refClassFilter')?$('#refClassFilter').value:'';
+  var data=state.reflections.filter(function(r){return!cls||r.class===cls});
+  var tbody=$('#refTableBody');
+  if(!data.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty"><div class="ei">'+icon('reflection',36)+'</div>暂无反思记录</div></td></tr>';return}
+  tbody.innerHTML=data.map(function(r){
+    return '<tr><td>'+formatDate(r.date)+'</td><td><span class="tag tag-blue">'+escapeHtml(r.class)+'</span></td><td>'+escapeHtml(r.lesson)+'</td><td>'+escapeHtml(r.progress||'')+'</td><td>'+escapeHtml(r.issues||'')+'</td><td>'+(r.reflection?escapeHtml(r.reflection).substring(0,30)+'…':'—')+'</td><td><button class="btn btn-sm btn-outline" onclick="editReflection(\''+r.id+'\')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delReflection(\''+r.id+'\')">删除</button></td></tr>'
+  }).join('');
+}
+window.showReflectionModal=function(id){
+  var r=id?state.reflections.find(function(x){return x.id===id}):{};
+  showModal(`
+    <div class="modal-title">${id?'编辑反思':'新增课后反思'}</div>
+    <div class="form-grid">
+      <div class="form-row"><label>日期</label><input type="date" class="input" id="refDate" value="${r.date||todayStr()}"></div>
+      <div class="form-row"><label>班级</label><select class="select" id="refClass">${['1班','2班'].map(function(c){return'<option value="'+c+'"'+(r.class===c?' selected':'')+'>'+c+'</option>'}).join('')}</select></div>
+      <div class="form-row"><label>课时</label><input type="text" class="input" id="refLesson" placeholder="如：第3课时" value="${escapeHtml(r.lesson||'')}"></div>
+      <div class="form-row"><label>授课进度</label><input type="text" class="input" id="refProgress" placeholder="如：《草原》第2段" value="${escapeHtml(r.progress||'')}"></div>
+    </div>
+    <div class="form-row"><label>课堂问题记录</label><textarea id="refIssues" placeholder="课堂上出现的问题...">${escapeHtml(r.issues||'')}</textarea></div>
+    <div class="form-row"><label>教学反思</label><textarea id="refText" placeholder="教学反思...">${escapeHtml(r.reflection||'')}</textarea></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveReflection('${id||''}')">保存</button>
+    </div>
+  `);
+};
+window.saveReflection=function(id){
+  var data={
+    date:$('#refDate').value,
+    class:$('#refClass').value,
+    lesson:$('#refLesson').value,
+    progress:$('#refProgress').value,
+    issues:$('#refIssues').value,
+    reflection:$('#refText').value
+  };
+  if(id){
+    var r=state.reflections.find(function(x){return x.id===id});
+    if(r)Object.assign(r,data);
+  }else{
+    data.id=uid();
+    state.reflections.push(data);
+  }
+  saveState();
+  closeModal();
+  renderRefTable();
+  toast('反思已保存');
+};
+window.editReflection=function(id){showReflectionModal(id)};
+window.delReflection=function(id){
+  if(!confirm('确定删除此条反思？'))return;
+  state.reflections=state.reflections.filter(function(r){return r.id!==id});
+  saveState();
+  renderRefTable();
+  toast('已删除');
+};
+window.exportReflectionsWord=function(){
+  var cls=$('#refClassFilter')?$('#refClassFilter').value:'';
+  var data=state.reflections.filter(function(r){return!cls||r.class===cls});
+  if(!data.length){toast('暂无数据');return}
+  var html='<h1 style="text-align:center">教学反思记录</h1>';
+  html+='<p style="text-align:center;color:#666">'+state.settings.grade+' '+state.settings.semester+' · 共'+data.length+'条</p>';
+  data.forEach(function(r,i){
+    html+='<div style="margin:20px 0;padding:15px;border:1px solid #ddd;border-radius:8px">';
+    html+='<h3>第'+(i+1)+'条 · '+formatDate(r.date)+' '+escapeHtml(r.class)+'</h3>';
+    html+='<p><b>课时：</b>'+escapeHtml(r.lesson||'')+'</p>';
+    html+='<p><b>授课进度：</b>'+escapeHtml(r.progress||'')+'</p>';
+    html+='<p><b>课堂问题：</b>'+escapeHtml(r.issues||'')+'</p>';
+    html+='<p><b>教学反思：</b>'+escapeHtml(r.reflection||'')+'</p>';
+    html+='</div>';
+  });
+  exportWord(html,'教学反思记录');
+};
+function exportWord(htmlContent,filename){
+  var header='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><title>'+filename+'</title></head><body style="font-family:宋体;font-size:14px">';
+  var footer='</body></html>';
+  var blob=new Blob(['\ufeff'+header+htmlContent+footer],{type:'application/msword'});
+  var link=document.createElement('a');
+  link.href=URL.createObjectURL(blob);
+  link.download=filename+'.doc';
+  link.click();
+  setTimeout(function(){URL.revokeObjectURL(link.href)},100);
+}
+
+/* ===== Homework ===== */
+function renderHomework(c){
+  c.innerHTML=`
+    <div class="tabs" id="hwTabs">
+      <button class="tab active" data-tab="assign">作业布置</button>
+      <button class="tab" data-tab="bank">分层题库</button>
+      <button class="tab" data-tab="dictation">默写错题</button>
+    </div>
+    <div id="hwTabContent"></div>
+  `;
+  document.querySelectorAll('#hwTabs .tab').forEach(function(t){
+    t.addEventListener('click',function(){
+      document.querySelectorAll('#hwTabs .tab').forEach(function(x){x.classList.remove('active')});
+      t.classList.add('active');
+      renderHwTab(t.dataset.tab);
+    });
+  });
+  renderHwTab('assign');
+}
+function renderHwTab(tab){
+  var c=$('#hwTabContent');
+  c.innerHTML='';
+  if(tab==='assign')renderHwAssign(c);
+  else if(tab==='bank')renderHwBank(c);
+  else if(tab==='dictation')renderHwDictation(c);
+}
+function renderHwAssign(c){
+  c.innerHTML=`
+    <div class="filter-bar">
+      <button class="btn btn-primary" onclick="showHomeworkModal()">+ 布置作业</button>
+      <button class="btn btn-outline" onclick="exportHwExcel()">⬇ 导出Excel</button>
+      <button class="btn btn-outline" onclick="document.getElementById('hwImportInput').click()">⬆ 导入Excel</button>
+      <input type="file" id="hwImportInput" accept=".xlsx,.xls" style="display:none" onchange="importHwExcel(this)">
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>布置日期</th><th>作业标题</th><th>类型</th><th>章节</th><th>班级</th><th>提交率</th><th>截止日期</th><th>操作</th></tr></thead>
+        <tbody id="hwTableBody"></tbody>
+      </table>
+    </div>
+  `;
+  renderHwTable();
+}
+function renderHwBank(c){
+  c.innerHTML=`
+    <div class="filter-bar">
+      <button class="btn btn-primary" onclick="showQuestionModal()">+ 添加题目</button>
+      <select class="select" id="qBankFilter" onchange="renderQBankTable()" style="min-width:120px">
+        <option value="">全部类型</option>
+        <option value="基础">基础题</option>
+        <option value="提升">提升题</option>
+        <option value="中考专项">中考专项</option>
+      </select>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>题目内容</th><th>类型</th><th>章节</th><th>难度</th><th>答案</th><th>操作</th></tr></thead>
+      <tbody id="qBankBody"></tbody>
+    </table></div>
+  `;
+  renderQBankTable();
+}
+function renderHwDictation(c){
+  c.innerHTML=`
+    <div class="filter-bar">
+      <button class="btn btn-primary" onclick="showDictationModal()">+ 归集错题</button>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>日期</th><th>学生</th><th>默写内容</th><th>错误字词</th><th>正确率</th><th>操作</th></tr></thead>
+      <tbody id="dictBody"></tbody>
+    </table></div>
+  `;
+  renderDictTable();
+}
+
+var questionBank=state.questionBank||[];
+
+function renderHwTable(){
+  var tbody=$('#hwTableBody');
+  if(!tbody)return;
+  if(!state.homework.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><div class="ei">'+icon('homework',36)+'</div>暂无作业记录</div></td></tr>';return}
+  tbody.innerHTML=state.homework.map(function(h){
+    var sub=h.submissions||[];
+    var done=sub.filter(function(s){return s.completed}).length;
+    var rate=sub.length?Math.round(done/sub.length*100):0;
+    return '<tr><td>'+formatDate(h.assignedDate)+'</td><td>'+escapeHtml(h.title)+'</td><td><span class="tag '+({base:'tag-blue',advanced:'tag-purple',exam:'tag-red'}[h.type]||'tag-gray')+'">'+({base:'基础',advanced:'提升',exam:'中考专项'}[h.type]||h.type)+'</span></td><td>'+escapeHtml(h.chapter||'')+'</td><td>'+escapeHtml(h.class||'')+'</td><td>'+rate+'%<div class="progress"><span style="width:'+rate+'%"></span></div></td><td>'+formatDate(h.dueDate)+'</td><td><button class="btn btn-sm btn-outline" onclick="showHomeworkModal(\''+h.id+'\')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delHomework(\''+h.id+'\')">删除</button></td></tr>'
+  }).join('');
+}
+window.showHomeworkModal=function(id){
+  var h=id?state.homework.find(function(x){return x.id===id}):{};
+  var students=state.students;
+  showModal(`
+    <div class="modal-title">${id?'编辑作业':'布置作业'}</div>
+    <div class="form-grid">
+      <div class="form-row"><label>作业标题</label><input type="text" class="input" id="hwTitle" value="${escapeHtml(h.title||'')}" placeholder="如：第三单元生字词抄写"></div>
+      <div class="form-row"><label>作业类型</label><select class="select" id="hwType"><option value="base" ${h.type==='base'?'selected':''}>基础</option><option value="advanced" ${h.type==='advanced'?'selected':''}>提升</option><option value="exam" ${h.type==='exam'?'selected':''}>中考专项</option></select></div>
+      <div class="form-row"><label>章节</label><input type="text" class="input" id="hwChapter" value="${escapeHtml(h.chapter||'')}" placeholder="如：第三单元"></div>
+      <div class="form-row"><label>班级</label><select class="select" id="hwClass"><option value="1班" ${h.class==='1班'?'selected':''}>1班</option><option value="2班" ${h.class==='2班'?'selected':''}>2班</option></select></div>
+      <div class="form-row"><label>布置日期</label><input type="date" class="input" id="hwAssigned" value="${h.assignedDate||todayStr()}"></div>
+      <div class="form-row"><label>截止日期</label><input type="date" class="input" id="hwDue" value="${h.dueDate||todayStr()}"></div>
+    </div>
+    ${id?'<div class="form-row"><label>学生提交情况</label><div id="hwSubmissions">'+students.map(function(s){
+      var sub=(h.submissions||[]).find(function(x){return x.studentId===s.id});
+      return '<div class="list-item"><label class="checkbox"><input type="checkbox" data-sid="'+s.id+'" '+(sub&&sub.completed?'checked':'')+'> <span style="margin-left:4px">'+escapeHtml(s.name)+'</span></label><input type="number" class="input" style="width:80px" data-score-sid="'+s.id+'" placeholder="分数" value="'+(sub?sub.score||'':'')+'"></div>'
+    }).join('')+'</div></div>':''}
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveHomework('${id||''}')">保存</button>
+    </div>
+  `);
+};
+window.saveHomework=function(id){
+  var data={
+    title:$('#hwTitle').value,
+    type:$('#hwType').value,
+    chapter:$('#hwChapter').value,
+    class:$('#hwClass').value,
+    assignedDate:$('#hwAssigned').value,
+    dueDate:$('#hwDue').value
+  };
+  if(id){
+    var h=state.homework.find(function(x){return x.id===id});
+    if(h){
+      Object.assign(h,data);
+      // Update submissions
+      var subs=[];
+      document.querySelectorAll('#hwSubmissions input[type=checkbox]').forEach(function(cb){
+        var sid=cb.dataset.sid;
+        var scoreInput=document.querySelector('[data-score-sid="'+sid+'"]');
+        subs.push({studentId:sid,completed:cb.checked,score:scoreInput?scoreInput.value:''});
+      });
+      h.submissions=subs;
+    }
+  }else{
+    data.id=uid();
+    data.submissions=state.students.map(function(s){return{studentId:s.id,completed:false,score:''}});
+    state.homework.push(data);
+  }
+  saveState();
+  closeModal();
+  renderHwTable();
+  toast('作业已保存');
+};
+window.delHomework=function(id){
+  if(!confirm('确定删除此作业？'))return;
+  state.homework=state.homework.filter(function(h){return h.id!==id});
+  saveState();
+  renderHwTable();
+  toast('已删除');
+};
+window.exportHwExcel=function(){
+  if(!state.homework.length){toast('暂无数据');return}
+  var rows=state.homework.map(function(h){
+    var subs=h.submissions||[];
+    var done=subs.filter(function(s){return s.completed}).length;
+    return{
+      '作业标题':h.title,'类型':{base:'基础',advanced:'提升',exam:'中考专项'}[h.type]||h.type,
+      '章节':h.chapter,'班级':h.class,'布置日期':h.assignedDate,'截止日期':h.dueDate,
+      '应交人数':subs.length,'已交人数':done,'提交率':subs.length?Math.round(done/subs.length*100)+'%':'0%'
+    }
+  });
+  exportExcel(rows,'作业管理数据');
+};
+window.importHwExcel=function(input){
+  var file=input.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=new Uint8Array(e.target.result);
+      var wb=XLSX.read(data,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var json=XLSX.utils.sheet_to_json(ws);
+      json.forEach(function(row){
+        state.homework.push({
+          id:uid(),
+          title:row['作业标题']||'',
+          type:{'基础':'base','提升':'advanced','中考专项':'exam'}[row['类型']]||'base',
+          chapter:row['章节']||'',class:row['班级']||'',
+          assignedDate:row['布置日期']||todayStr(),dueDate:row['截止日期']||todayStr(),
+          submissions:state.students.map(function(s){return{studentId:s.id,completed:false,score:''}})
+        });
+      });
+      saveState();
+      renderHwTable();
+      toast('导入成功，共'+json.length+'条');
+    }catch(err){toast('导入失败：'+err.message)}
+  };
+  reader.readAsArrayBuffer(file);
+};
+function exportExcel(data,filename){
+  var ws=XLSX.utils.json_to_sheet(data);
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
+  XLSX.writeFile(wb,filename+'.xlsx');
+}
+
+// Question Bank
+window.showQuestionModal=function(id){
+  var q=id?questionBank.find(function(x){return x.id===id}):{};
+  showModal(`
+    <div class="modal-title">${id?'编辑题目':'添加题目'}</div>
+    <div class="form-row"><label>题目内容</label><textarea id="qContent" placeholder="输入题目内容...">${escapeHtml(q.content||'')}</textarea></div>
+    <div class="form-grid">
+      <div class="form-row"><label>类型</label><select class="select" id="qType"><option value="基础" ${q.type==='基础'?'selected':''}>基础</option><option value="提升" ${q.type==='提升'?'selected':''}>提升</option><option value="中考专项" ${q.type==='中考专项'?'selected':''}>中考专项</option></select></div>
+      <div class="form-row"><label>章节</label><input type="text" class="input" id="qChapter" value="${escapeHtml(q.chapter||'')}"></div>
+      <div class="form-row"><label>难度</label><select class="select" id="qDiff"><option value="★" ${q.difficulty==='★'?'selected':''}>★</option><option value="★★" ${q.difficulty==='★★'?'selected':''}>★★</option><option value="★★★" ${q.difficulty==='★★★'?'selected':''}>★★★</option></select></div>
+    </div>
+    <div class="form-row"><label>参考答案</label><textarea id="qAnswer">${escapeHtml(q.answer||'')}</textarea></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveQuestion('${id||''}')">保存</button></div>
+  `);
+};
+window.saveQuestion=function(id){
+  var data={content:$('#qContent').value,type:$('#qType').value,chapter:$('#qChapter').value,difficulty:$('#qDiff').value,answer:$('#qAnswer').value};
+  if(id){var q=questionBank.find(function(x){return x.id===id});if(q)Object.assign(q,data)}
+  else{data.id=uid();questionBank.push(data)}
+  state.questionBank=questionBank;saveState();
+  closeModal();renderQBankTable();toast('题目已保存');
+};
+window.delQuestion=function(id){questionBank=questionBank.filter(function(q){return q.id!==id});state.questionBank=questionBank;saveState();renderQBankTable();toast('已删除')};
+function renderQBankTable(){
+  var filter=$('#qBankFilter')?$('#qBankFilter').value:'';
+  var data=questionBank.filter(function(q){return!filter||q.type===filter});
+  var tbody=$('#qBankBody');
+  if(!tbody)return;
+  if(!data.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty"><div class="ei">'+icon('list',36)+'</div>暂无题目</div></td></tr>';return}
+  tbody.innerHTML=data.map(function(q){
+    return '<tr><td style="max-width:200px">'+escapeHtml(q.content).substring(0,40)+'…</td><td><span class="tag '+({基础:'tag-blue',提升:'tag-purple',中考专项:'tag-red'}[q.type]||'tag-gray')+'">'+q.type+'</span></td><td>'+escapeHtml(q.chapter||'')+'</td><td>'+escapeHtml(q.difficulty||'')+'</td><td style="max-width:150px">'+escapeHtml(q.answer||'').substring(0,30)+'</td><td><button class="btn btn-sm btn-outline" onclick="showQuestionModal(\''+q.id+'\')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delQuestion(\''+q.id+'\')">删除</button></td></tr>'
+  }).join('');
+}
+
+// Dictation
+window.showDictationModal=function(id){
+  var d=id?(state.dictations||[]).find(function(x){return x.id===id}):{};
+  showModal(`
+    <div class="modal-title">${id?'编辑错题':'归集默写错题'}</div>
+    <div class="form-grid">
+      <div class="form-row"><label>日期</label><input type="date" class="input" id="dictDate" value="${d.date||todayStr()}"></div>
+      <div class="form-row"><label>学生</label><select class="select" id="dictStudent">${state.students.map(function(s){return'<option value="'+s.id+'"'+(d.studentId===s.id?' selected':'')+'>'+escapeHtml(s.name)+'</option>'}).join('')}</select></div>
+    </div>
+    <div class="form-row"><label>默写内容</label><input type="text" class="input" id="dictContent" value="${escapeHtml(d.content||'')}" placeholder="如：《草原》生字词"></div>
+    <div class="form-row"><label>错误字词</label><textarea id="dictErrors" placeholder="如：毯、陈、茫...">${escapeHtml(d.errors||'')}</textarea></div>
+    <div class="form-row"><label>正确率</label><input type="number" class="input" id="dictRate" value="${d.rate||''}" placeholder="如：85"></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveDictation('${id||''}')">保存</button></div>
+  `);
+};
+window.saveDictation=function(id){
+  var data={date:$('#dictDate').value,studentId:$('#dictStudent').value,content:$('#dictContent').value,errors:$('#dictErrors').value,rate:$('#dictRate').value};
+  if(!state.dictations)state.dictations=[];
+  if(id){var d=state.dictations.find(function(x){return x.id===id});if(d)Object.assign(d,data)}
+  else{data.id=uid();state.dictations.push(data)}
+  saveState();closeModal();renderDictTable();toast('已保存');
+};
+window.delDictation=function(id){state.dictations=(state.dictations||[]).filter(function(d){return d.id!==id});saveState();renderDictTable();toast('已删除')};
+function renderDictTable(){
+  var tbody=$('#dictBody');
+  if(!tbody)return;
+  var data=state.dictations||[];
+  if(!data.length){tbody.innerHTML='<tr><td colspan="6"><div class="empty"><div class="ei">'+icon('edit',36)+'</div>暂无默写错题记录</div></td></tr>';return}
+  tbody.innerHTML=data.map(function(d){
+    var s=state.students.find(function(x){return x.id===d.studentId});
+    return '<tr><td>'+formatDate(d.date)+'</td><td>'+(s?escapeHtml(s.name):'—')+'</td><td>'+escapeHtml(d.content||'')+'</td><td><span style="color:var(--red)">'+escapeHtml(d.errors||'')+'</span></td><td>'+(d.rate||'—')+'%</td><td><button class="btn btn-sm btn-outline" onclick="showDictationModal(\''+d.id+'\')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delDictation(\''+d.id+'\')">删除</button></td></tr>'
+  }).join('');
+}
+
+/* ===== Grades ===== */
+function renderGrades(c){
+  c.innerHTML=`
+    <div class="filter-bar">
+      <button class="btn btn-primary" onclick="showExamModal()">+ 新增测试</button>
+      <button class="btn btn-outline" onclick="exportGradesExcel()">⬇ 导出Excel</button>
+      <button class="btn btn-outline" onclick="exportGradeReportWord()">${icon('file',14)} 学情报告</button>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>考试名称</th><th>类型</th><th>日期</th><th>第几周</th><th>参考人数</th><th>均分</th><th>最高分</th><th>最低分</th><th>及格率</th><th>操作</th></tr></thead>
+      <tbody id="examTableBody"></tbody>
+    </table></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px">
+      <div class="card"><div class="card-title">${icon('trend_up',16)} 班级均分趋势</div><div class="chart-wrap"><canvas id="gradeChart1"></canvas></div></div>
+      <div class="card"><div class="card-title">${icon('target',16)} 知识点失分统计</div><div class="chart-wrap"><canvas id="gradeChart2"></canvas></div></div>
+    </div>
+    <div class="card" style="margin-top:16px"><div class="card-title">${icon('activity',16)} 单人语文学情追踪</div>
+      <div class="filter-bar"><select class="select" id="trackStudent" onchange="renderStudentTrack()">${state.students.map(function(s){return'<option value="'+s.id+'">'+escapeHtml(s.name)+'</option>'}).join('')}</select></div>
+      <div class="chart-wrap"><canvas id="gradeChart3"></canvas></div>
+    </div>
+  `;
+  renderExamTable();
+  renderGradeCharts();
+}
+function renderExamTable(){
+  var tbody=$('#examTableBody');
+  if(!tbody)return;
+  if(!state.exams.length){tbody.innerHTML='<tr><td colspan="10"><div class="empty"><div class="ei">'+icon('trend_up',36)+'</div>暂无考试记录</div></td></tr>';return}
+  tbody.innerHTML=state.exams.map(function(e){
+    var scores=e.scores||[];
+    var nums=scores.map(function(s){return parseFloat(s.score)||0});
+    var avg=nums.length?(nums.reduce(function(a,b){return a+b},0)/nums.length).toFixed(1):'—';
+    var max=nums.length?Math.max.apply(null,nums):'—';
+    var min=nums.length?Math.min.apply(null,nums):'—';
+    var pass=nums.filter(function(n){return n>=60}).length;
+    var passRate=nums.length?Math.round(pass/nums.length*100):0;
+    var week=getWeekFromDate(e.date);
+    return '<tr><td>'+escapeHtml(e.name)+'</td><td><span class="tag '+({unit:'tag-blue',monthly:'tag-orange',mid:'tag-purple',final:'tag-red',exp:'tag-green'}[e.type]||'tag-gray')+'">'+({unit:'单元测',monthly:'月考',mid:'期中',final:'期末',exp:'实验'}[e.type]||e.type)+'</span></td><td>'+formatDate(e.date)+'</td><td>第'+week+'周</td><td>'+scores.length+'</td><td style="font-weight:700;color:var(--blue)">'+avg+'</td><td style="color:var(--green)">'+max+'</td><td style="color:var(--red)">'+min+'</td><td>'+passRate+'%</td><td><button class="btn btn-sm btn-outline" onclick="showExamModal(\''+e.id+'\')">编辑</button> <button class="btn btn-sm btn-secondary" onclick="showScoreModal(\''+e.id+'\')">成绩</button> <button class="btn btn-sm btn-danger" onclick="delExam(\''+e.id+'\')">删除</button></td></tr>'
+  }).join('');
+}
+function getWeekFromDate(dateStr){
+  if(!dateStr||!state.settings.startDate)return 1;
+  var start=new Date(state.settings.startDate);
+  var d=new Date(dateStr);
+  var days=Math.floor((d-start)/86400000);
+  if(days<0)return 0;
+  return Math.floor(days/7)+1;
+}
+window.showExamModal=function(id){
+  var e=id?state.exams.find(function(x){return x.id===id}):{};
+  showModal(`
+    <div class="modal-title">${id?'编辑测试':'新增测试'}</div>
+    <div class="form-grid">
+      <div class="form-row"><label>考试名称</label><input type="text" class="input" id="examName" value="${escapeHtml(e.name||'')}" placeholder="如：第一单元测试"></div>
+      <div class="form-row"><label>测试类型</label><select class="select" id="examType"><option value="unit" ${e.type==='unit'?'selected':''}>单元测</option><option value="monthly" ${e.type==='monthly'?'selected':''}>月考</option><option value="mid" ${e.type==='mid'?'selected':''}>期中</option><option value="final" ${e.type==='final'?'selected':''}>期末</option><option value="exp" ${e.type==='exp'?'selected':''}>实验测试</option></select></div>
+      <div class="form-row"><label>日期</label><input type="date" class="input" id="examDate" value="${e.date||todayStr()}"></div>
+      <div class="form-row"><label>班级</label><select class="select" id="examClass"><option value="1班" ${e.class==='1班'?'selected':''}>1班</option><option value="2班" ${e.class==='2班'?'selected':''}>2班</option></select></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveExam('${id||''}')">保存</button></div>
+  `);
+};
+window.saveExam=function(id){
+  var data={name:$('#examName').value,type:$('#examType').value,date:$('#examDate').value,class:$('#examClass').value};
+  if(id){var e=state.exams.find(function(x){return x.id===id});if(e)Object.assign(e,data)}
+  else{data.id=uid();data.scores=state.students.map(function(s){return{studentId:s.id,score:''}});state.exams.push(data)}
+  saveState();closeModal();renderExamTable();renderGradeCharts();toast('已保存');
+};
+window.delExam=function(id){if(!confirm('确定删除？'))return;state.exams=state.exams.filter(function(e){return e.id!==id});saveState();renderExamTable();renderGradeCharts();toast('已删除')};
+window.showScoreModal=function(examId){
+  var e=state.exams.find(function(x){return x.id===examId});
+  if(!e)return;
+  showModal(`
+    <div class="modal-title">成绩录入 — ${escapeHtml(e.name)}</div>
+    <div class="note">共${state.students.length}人，当前已录${(e.scores||[]).filter(function(s){return s.score}).length}人</div>
+    <div style="max-height:400px;overflow-y:auto;margin:12px 0">
+      ${state.students.map(function(s){
+        var sc=(e.scores||[]).find(function(x){return x.studentId===s.id});
+        return '<div class="list-item"><div class="avatar" style="width:32px;height:32px;border-radius:50%;background:var(--blue-bg);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0">'+escapeHtml(s.name.charAt(0))+'</div><div class="li-main"><div class="li-title">'+escapeHtml(s.name)+'</div><div class="li-sub">'+escapeHtml(s.studentId||'')+'</div></div><input type="number" class="input" style="width:80px" data-sid="'+s.id+'" placeholder="分数" value="'+(sc?sc.score||'':'')+'"></div>'
+      }).join('')}
+    </div>
+    <div class="form-row"><label>知识点失分（选填，格式：知识点:失分人数，逗号分隔）</label><input type="text" class="input" id="examKp" value="${escapeHtml(e.knowledgePoints||'')}" placeholder="如：修辞手法:8,文言文:5,阅读理解:12"></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveScores('${examId}')">保存成绩</button></div>
+  `);
+};
+window.saveScores=function(examId){
+  var e=state.exams.find(function(x){return x.id===examId});
+  if(!e)return;
+  var scores=[];
+  document.querySelectorAll('[data-sid]').forEach(function(inp){
+    scores.push({studentId:inp.dataset.sid,score:inp.value});
+  });
+  e.scores=scores;
+  e.knowledgePoints=$('#examKp').value;
+  saveState();closeModal();renderExamTable();renderGradeCharts();toast('成绩已保存');
+};
+window.exportGradesExcel=function(){
+  if(!state.exams.length){toast('暂无数据');return}
+  var rows=[];
+  state.exams.forEach(function(e){
+    (e.scores||[]).forEach(function(sc){
+      var s=state.students.find(function(x){return x.id===sc.studentId});
+      rows.push({'考试名称':e.name,'类型':{unit:'单元测',monthly:'月考',mid:'期中',final:'期末',exp:'实验'}[e.type]||e.type,'日期':e.date,'班级':e.class,'姓名':s?s.name:'','学号':s?s.studentId:'','分数':sc.score||''});
+    });
+  });
+  exportExcel(rows,'成绩数据');
+};
+window.exportGradeReportWord=function(){
+  var exams=state.exams.filter(function(e){return e.scores&&e.scores.length});
+  if(!exams.length){toast('暂无成绩数据');return}
+  var html='<h1 style="text-align:center">语文学情分析报告</h1>';
+  html+='<p style="text-align:center;color:#666">'+state.settings.grade+' '+state.settings.semester+' · 生成日期：'+todayStr()+'</p>';
+  exams.forEach(function(e){
+    var scores=e.scores.map(function(s){return parseFloat(s.score)||0});
+    var avg=scores.length?(scores.reduce(function(a,b){return a+b},0)/scores.length).toFixed(1):0;
+    var max=Math.max.apply(null,scores);
+    var min=Math.min.apply(null,scores);
+    var pass=scores.filter(function(n){return n>=60}).length;
+    html+='<div style="margin:16px 0;padding:12px;border:1px solid #ddd">';
+    html+='<h3>'+escapeHtml(e.name)+' ('+formatDate(e.date)+')</h3>';
+    html+='<p>参考人数：'+scores.length+' | 均分：'+avg+' | 最高分：'+max+' | 最低分：'+min+' | 及格率：'+Math.round(pass/scores.length*100)+'%</p>';
+    if(e.knowledgePoints)html+='<p><b>知识点失分：</b>'+escapeHtml(e.knowledgePoints)+'</p>';
+    html+='</div>';
+  });
+  // Student summary
+  html+='<h2>学生个人学情</h2>';
+  state.students.forEach(function(s){
+    var scores=exams.map(function(e){var sc=e.scores.find(function(x){return x.studentId===s.id});return sc?sc.score:'—'});
+    html+='<p><b>'+escapeHtml(s.name)+'</b>：'+scores.join(' / ')+'</p>';
+  });
+  exportWord(html,'语文学情报告');
+};
+function renderGradeCharts(){
+  // Chart 1: Class average trend
+  var exams=state.exams.filter(function(e){return e.scores&&e.scores.length}).sort(function(a,b){return new Date(a.date)-new Date(b.date)});
+  var ctx1=document.getElementById('gradeChart1');
+  if(ctx1){
+    ctx1=ctx1.getContext('2d');
+    var labels=exams.map(function(e){return e.name});
+    var avgs=exams.map(function(e){
+      var sc=e.scores.map(function(s){return parseFloat(s.score)||0});
+      return sc.length?(sc.reduce(function(a,b){return a+b},0)/sc.length).toFixed(1):0;
+    });
+    chartInstances.g1=new Chart(ctx1,{type:'line',data:{labels:labels,datasets:[{label:'均分',data:avgs,borderColor:'#007AFF',backgroundColor:'rgba(0,122,255,.1)',fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:false,min:0,max:100}}}});
+  }
+  // Chart 2: Knowledge point loss
+  var kpData={};
+  state.exams.forEach(function(e){
+    if(e.knowledgePoints){
+      e.knowledgePoints.split(/[,，]/).forEach(function(item){
+        var parts=item.trim().split(/[:：]/);
+        if(parts.length===2){kpData[parts[0].trim()]=(kpData[parts[0].trim()]||0)+parseInt(parts[1])||0}
+      });
+    }
+  });
+  var ctx2=document.getElementById('gradeChart2');
+  if(ctx2){
+    ctx2=ctx2.getContext('2d');
+    var kpLabels=Object.keys(kpData);
+    var kpValues=Object.values(kpData);
+    if(kpLabels.length){
+      chartInstances.g2=new Chart(ctx2,{type:'bar',data:{labels:kpLabels,datasets:[{label:'失分人数',data:kpValues,backgroundColor:'#FF9500',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true}}}});
+    }else{
+      ctx2.canvas.parentElement.innerHTML='<div class="empty"><div class="ei">'+icon('pie',36)+'</div>暂无知识点失分数据</div>';
+    }
+  }
+  // Chart 3: Student tracking
+  renderStudentTrack();
+}
+window.renderStudentTrack=function(){
+  var sid=$('#trackStudent')?$('#trackStudent').value:'';
+  var ctx3=document.getElementById('gradeChart3');
+  if(!ctx3||!sid)return;
+  ctx3=ctx3.getContext('2d');
+  var exams=state.exams.filter(function(e){return e.scores&&e.scores.length}).sort(function(a,b){return new Date(a.date)-new Date(b.date)});
+  var labels=exams.map(function(e){return e.name});
+  var scores=exams.map(function(e){var sc=e.scores.find(function(x){return x.studentId===sid});return sc?parseFloat(sc.score)||0:0});
+  var classAvgs=exams.map(function(e){var sc=e.scores.map(function(s){return parseFloat(s.score)||0});return sc.length?(sc.reduce(function(a,b){return a+b},0)/sc.length).toFixed(1):0});
+  if(chartInstances.g3)chartInstances.g3.destroy();
+  chartInstances.g3=new Chart(ctx3,{type:'line',data:{labels:labels,datasets:[{label:'个人成绩',data:scores,borderColor:'#007AFF',backgroundColor:'rgba(0,122,255,.1)',fill:true,tension:.3},{label:'班级均分',data:classAvgs,borderColor:'#34C759',borderDash:[5,5],fill:false,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},scales:{y:{beginAtZero:false,min:0,max:100}}}});
+};
+
+/* ===== Todos ===== */
+function renderTodos(c){
+  c.innerHTML=`
+    <div class="filter-bar">
+      <button class="btn btn-primary" onclick="showTodoModal()">+ 新增待办</button>
+      <select class="select" id="todoFilter" onchange="renderTodoList()" style="min-width:120px">
+        <option value="">全部</option>
+        <option value="备课">备课提醒</option>
+        <option value="命题">试卷命题</option>
+        <option value="教研">教研会议</option>
+        <option value="听课">听课任务</option>
+        <option value="其他">其他</option>
+      </select>
+    </div>
+    <div id="todoList"></div>
+  `;
+  renderTodoList();
+}
+function renderTodoList(){
+  var filter=$('#todoFilter')?$('#todoFilter').value:'';
+  var data=state.todos.filter(function(t){return!filter||t.type===filter}).sort(function(a,b){return(b.date||'').localeCompare(a.date||'')});
+  var c=$('#todoList');
+  if(!data.length){c.innerHTML='<div class="empty"><div class="ei">'+icon('todos',36)+'</div>暂无待办事项</div>';return}
+  c.innerHTML=data.map(function(t){
+    var isDone=t.completed;
+    return '<div class="list-item" style="'+(isDone?'opacity:.5':'')+'"><label class="checkbox"><input type="checkbox" '+(isDone?'checked':'')+' onchange="toggleTodo(\''+t.id+'\')"></label><div class="li-main"><div class="li-title" style="'+(isDone?'text-decoration:line-through':'')+'">'+escapeHtml(t.title)+'</div><div class="li-sub"><span class="tag '+getTodoTagClass(t.type)+'">'+escapeHtml(t.type)+'</span> '+formatDate(t.date)+'</div></div><button class="btn btn-sm btn-outline" onclick="showTodoModal(\''+t.id+'\')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delTodo(\''+t.id+'\')">删除</button></div>';
+  }).join('');
+}
+window.showTodoModal=function(id){
+  var t=id?state.todos.find(function(x){return x.id===id}):{};
+  showModal(`
+    <div class="modal-title">${id?'编辑待办':'新增待办'}</div>
+    <div class="form-row"><label>待办内容</label><input type="text" class="input" id="todoTitle" value="${escapeHtml(t.title||'')}" placeholder="如：准备第三单元课件"></div>
+    <div class="form-grid">
+      <div class="form-row"><label>类型</label><select class="select" id="todoType"><option value="备课" ${t.type==='备课'?'selected':''}>备课提醒</option><option value="命题" ${t.type==='命题'?'selected':''}>试卷命题</option><option value="教研" ${t.type==='教研'?'selected':''}>教研会议</option><option value="听课" ${t.type==='听课'?'selected':''}>听课任务</option><option value="其他" ${t.type==='其他'?'selected':''}>其他</option></select></div>
+      <div class="form-row"><label>日期</label><input type="date" class="input" id="todoDate" value="${t.date||todayStr()}"></div>
+    </div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveTodo('${id||''}')">保存</button></div>
+  `);
+};
+window.saveTodo=function(id){
+  var data={title:$('#todoTitle').value,type:$('#todoType').value,date:$('#todoDate').value,completed:false};
+  if(id){var t=state.todos.find(function(x){return x.id===id});if(t){data.completed=t.completed;Object.assign(t,data)}}else{data.id=uid();state.todos.push(data)}
+  saveState();closeModal();renderTodoList();toast('已保存');
+};
+window.delTodo=function(id){state.todos=state.todos.filter(function(t){return t.id!==id});saveState();renderTodoList();toast('已删除')};
+window.toggleTodo=function(id){var t=state.todos.find(function(x){return x.id===id});if(t){t.completed=!t.completed;saveState();renderTodoList()}};
+
+/* ===== Students ===== */
+function renderStudents(c){
+  c.innerHTML=`
+    <div class="filter-bar">
+      <button class="btn btn-primary" onclick="showStudentModal()">+ 添加学生</button>
+      <button class="btn btn-outline" onclick="exportStudentsExcel()">⬇ 导出名单</button>
+      <input type="text" class="input" id="stuSearch" placeholder="搜索学生..." oninput="renderStudentGrid()" style="min-width:200px">
+    </div>
+    <div class="student-grid" id="stuGrid"></div>
+  `;
+  renderStudentGrid();
+}
+function renderStudentGrid(){
+  var kw=($('#stuSearch')?$('#stuSearch').value:'').trim();
+  var data=state.students.filter(function(s){return!kw||s.name.includes(kw)||(s.studentId||'').includes(kw)});
+  var grid=$('#stuGrid');
+  if(!data.length){grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="ei">'+icon('students',36)+'</div>暂无学生，请添加</div>';return}
+  grid.innerHTML=data.map(function(s){
+    var levelTag=s.level?'<span class="tag '+(s.level==='培优'?'tag-purple':'tag-red')+'">'+s.level+'</span>':'';
+    return '<div class="student-card" onclick="showStudentModal(\''+s.id+'\')"><div class="avatar">'+escapeHtml(s.name.charAt(0))+'</div><div class="sn">'+escapeHtml(s.name)+'</div><div class="si">'+(s.studentId||'无学号')+' · '+(s.class||'')+'</div>'+levelTag+'<div style="margin-top:6px;font-size:12px;color:var(--text2)">'+escapeHtml(s.notes||'')+'</div></div>';
+  }).join('');
+}
+window.showStudentModal=function(id){
+  var s=id?state.students.find(function(x){return x.id===id}):{};
+  showModal(`
+    <div class="modal-title">${id?'编辑学生':'添加学生'}</div>
+    <div class="form-grid">
+      <div class="form-row"><label>姓名</label><input type="text" class="input" id="stuName" value="${escapeHtml(s.name||'')}"></div>
+      <div class="form-row"><label>学号</label><input type="text" class="input" id="stuSid" value="${escapeHtml(s.studentId||'')}"></div>
+      <div class="form-row"><label>班级</label><select class="select" id="stuClass"><option value="1班" ${s.class==='1班'?'selected':''}>1班</option><option value="2班" ${s.class==='2班'?'selected':''}>2班</option></select></div>
+      <div class="form-row"><label>分层</label><select class="select" id="stuLevel"><option value="" ${!s.level?'selected':''}>普通</option><option value="培优" ${s.level==='培优'?'selected':''}>培优</option><option value="补差" ${s.level==='补差'?'selected':''}>补差</option></select></div>
+    </div>
+    <div class="form-row"><label>家长联系方式</label><input type="text" class="input" id="stuParent" value="${escapeHtml(s.parentContact||'')}"></div>
+    <div class="form-row"><label>备注</label><textarea id="stuNotes" placeholder="如：语文基础薄弱、阅读理解需加强...">${escapeHtml(s.notes||'')}</textarea></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveStudent('${id||''}')">保存</button></div>
+  `);
+};
+window.saveStudent=function(id){
+  var data={name:$('#stuName').value,studentId:$('#stuSid').value,class:$('#stuClass').value,level:$('#stuLevel').value,parentContact:$('#stuParent').value,notes:$('#stuNotes').value};
+  if(id){var s=state.students.find(function(x){return x.id===id});if(s)Object.assign(s,data)}
+  else{data.id=uid();state.students.push(data)}
+  saveState();closeModal();renderStudentGrid();toast('已保存');
+};
+window.delStudent=function(id){
+  // This is called from edit modal
+  if(!confirm('确定删除此学生？相关成绩数据将保留但失去关联。'))return;
+  state.students=state.students.filter(function(s){return s.id!==id});
+  saveState();closeModal();renderStudentGrid();toast('已删除');
+};
+window.exportStudentsExcel=function(){
+  if(!state.students.length){toast('暂无数据');return}
+  var rows=state.students.map(function(s){
+    return{'姓名':s.name,'学号':s.studentId,'班级':s.class,'分层':s.level||'普通','家长联系方式':s.parentContact||'','备注':s.notes||''};
+  });
+  exportExcel(rows,'学生名单');
+};
+
+/* ===== Class Roster ===== */
+function renderClassRoster(c){
+  var classCount={};
+  state.students.forEach(function(s){classCount[s.class]=(classCount[s.class]||0)+1});
+  c.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('students',20)}</div><div class="stat-label">总人数</div><div class="stat-value" style="color:var(--blue)">${state.students.length}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#E8F8EC;color:var(--green)">${icon('class2',20)}</div><div class="stat-label">1班人数</div><div class="stat-value" style="color:var(--green)">${classCount['1班']||0}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#F0EDFF;color:var(--purple)">${icon('class2',20)}</div><div class="stat-label">2班人数</div><div class="stat-value" style="color:var(--purple)">${classCount['2班']||0}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FFF3E0;color:var(--orange)">${icon('target',20)}</div><div class="stat-label">培优人数</div><div class="stat-value" style="color:var(--orange)">${state.students.filter(function(s){return s.level==='培优'}).length}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">${icon('class2',16)} 班级基本信息</div>
+      <div class="form-grid">
+        <div class="form-row"><label>年级</label><input type="text" class="input" value="${state.settings.grade}" readonly></div>
+        <div class="form-row"><label>学期</label><input type="text" class="input" value="${state.settings.semester}" readonly></div>
+        <div class="form-row"><label>班主任</label><input type="text" class="input" id="className" value="${state.classInfo?.teacher||''}" placeholder="班主任姓名" onchange="saveClassInfo()"></div>
+        <div class="form-row"><label>班级口号</label><input type="text" class="input" id="classSlogan" value="${state.classInfo?.slogan||''}" placeholder="班级口号" onchange="saveClassInfo()"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">${icon('pie',16)} 班级成绩分布</div>
+      <div class="chart-wrap"><canvas id="rosterChart"></canvas></div>
+    </div>
+  `;
+  // Render distribution chart
+  var ctx=document.getElementById('rosterChart');
+  if(ctx){
+    ctx=ctx.getContext('2d');
+    var exams=state.exams.filter(function(e){return e.scores&&e.scores.length});
+    var ranges={'90-100':0,'80-89':0,'70-79':0,'60-69':0,'<60':0};
+    exams.forEach(function(e){
+      e.scores.forEach(function(s){var sc=parseFloat(s.score)||0;if(sc>=90)ranges['90-100']++;else if(sc>=80)ranges['80-89']++;else if(sc>=70)ranges['70-79']++;else if(sc>=60)ranges['60-69']++;else ranges['<60']++});
+    });
+    chartInstances.roster=new Chart(ctx,{type:'bar',data:{labels:Object.keys(ranges),datasets:[{label:'人数',data:Object.values(ranges),backgroundColor:['#34C759','#007AFF','#5AC8FA','#FF9500','#FF3B30'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,stepSize:1}}}});
+  }
+}
+window.saveClassInfo=function(){
+  if(!state.classInfo)state.classInfo={};
+  state.classInfo.teacher=$('#className')?.value||'';
+  state.classInfo.slogan=$('#classSlogan')?.value||'';
+  saveState();
+};
+
+/* ===== Schedule Dashboard ===== */
+function renderScheduleDashboard(c){
+  var today=new Date();
+  var wd=today.getDay();
+  var wdName=['日','一','二','三','四','五','六'][wd];
+  var todaySchedule=getTodayPersonalSchedule();
+  var allTasks=getTodayAllTasks();
+  var week=getCurrentWeek();
+  c.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('calendar',20)}</div><div class="stat-label">今日</div><div class="stat-value" style="color:var(--blue);font-size:18px">周${wdName}</div><div class="stat-sub">第${week}周</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#E8F8EC;color:var(--green)">${icon('book',20)}</div><div class="stat-label">今日语文课</div><div class="stat-value" style="color:var(--green)">${todaySchedule.length}</div><div class="stat-sub">节</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FFF3E0;color:var(--orange)">${icon('class2',20)}</div><div class="stat-label">今日总任务</div><div class="stat-value" style="color:var(--orange)">${allTasks.length}</div><div class="stat-sub">含班会/监考</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#F0EDFF;color:var(--purple)">${icon('refresh',20)}</div><div class="stat-label">本周调课</div><div class="stat-value" style="color:var(--purple)">${state.swapClasses.filter(function(s){return getWeekFromDate(s.date)===week}).length}</div><div class="stat-sub">次调课记录</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">${icon('list',16)} 今日日程</div>
+      ${allTasks.length?allTasks.map(function(t){
+        var iconSvg=ICONS[t.iconName]||ICONS.book;
+        return '<div class="list-item"><div class="avatar" style="width:36px;height:36px;border-radius:10px;background:'+t.bg+';color:'+t.color+';display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg class="icon-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+iconSvg+'</svg></div><div class="li-main"><div class="li-title">'+escapeHtml(t.title)+'</div><div class="li-sub">第'+t.period+'节 · '+escapeHtml(t.time||'')+'</div></div>'+(t.exp?'<span class="tag tag-orange">实验</span>':'')+(t.swap?'<span class="tag tag-red">调课</span>':'')+'</div>';
+      }).join(''):'<div class="empty"><div class="ei">'+icon('calendar',36)+'</div>今日无课程安排</div>'}
+    </div>
+    <div class="card">
+      <div class="card-title">${icon('pie',16)} 本周总日程概览</div>
+      <div class="chart-wrap"><canvas id="sdChart"></canvas></div>
+    </div>
+  `;
+  // Week overview chart
+  var ctx=document.getElementById('sdChart');
+  if(ctx){
+    ctx=ctx.getContext('2d');
+    var days=['周一','周二','周三','周四','周五'];
+    var counts=days.map(function(_,i){
+      var dayIdx=i+1;
+      var count=0;
+      state.personalSchedule.forEach(function(p){if(p.weekDay==dayIdx)count++});
+      state.classSchedule.forEach(function(p){if(p.weekDay==dayIdx&&p.subject==='班会')count++});
+      return count;
+    });
+    chartInstances.sd=new Chart(ctx,{type:'bar',data:{labels:days,datasets:[{label:'课程数',data:counts,backgroundColor:'#007AFF',borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,stepSize:1}}}});
+  }
+}
+function getTodayPersonalSchedule(){
+  var wd=new Date().getDay();
+  if(wd===0||wd===6)return[];
+  return state.personalSchedule.filter(function(p){return p.weekDay==wd}).sort(function(a,b){return a.period-b.period});
+}
+function getTodayAllTasks(){
+  var tasks=[];
+  var wd=new Date().getDay();
+  if(wd===0||wd===6)return tasks;
+  // Personal schedule (Chinese classes)
+  state.personalSchedule.forEach(function(p){
+    if(p.weekDay==wd){
+      tasks.push({title:p.subject+' '+(p.chapter||''),period:p.period,time:p.time,iconName:'book',bg:'#EAF2FF',color:'#007AFF',exp:!!p.equipment,swap:false});
+    }
+  });
+  // Class activities (homeroom)
+  state.classSchedule.forEach(function(p){
+    if(p.weekDay==wd&&(p.subject==='班会'||p.isActivity)){
+      tasks.push({title:p.subject,period:p.period,time:p.time,iconName:'class2',bg:'#E8F8EC',color:'#34C759',exp:false,swap:false});
+    }
+  });
+  return tasks.sort(function(a,b){return a.period-b.period});
+}
+
+/* ===== Personal Schedule ===== */
+var periodsDefault=[
+  {name:'第一节',time:'08:00-08:45'},
+  {name:'第二节',time:'08:55-09:40'},
+  {name:'第三节',time:'10:00-10:45'},
+  {name:'第四节',time:'10:55-11:40'},
+  {name:'午读',time:'11:40-12:10'},
+  {name:'第五节',time:'14:00-14:45'},
+  {name:'第六节',time:'14:55-15:40'},
+  {name:'第七节',time:'16:00-16:45'},
+  {name:'第八节',time:'16:55-17:40'}
+];
+function getPeriods(){
+  return state.periods||periodsDefault;
+}
+function renderPersonalSchedule(c){
+  var periods=getPeriods();
+  var days=['周一','周二','周三','周四','周五'];
+  c.innerHTML=`
+    <div class="filter-bar">
+      <button class="btn btn-primary" onclick="showPeriodModal()">+ 编辑时间</button>
+      <button class="btn btn-outline" onclick="exportScheduleImage('personal')">${icon('image',14)} 导出图片</button>
+      <button class="btn btn-outline" onclick="exportScheduleExcel('personal')">⬇ 导出Excel</button>
+    </div>
+    <div class="schedule-wrap" id="personalScheduleWrap">
+      <table class="schedule-grid">
+        <thead><tr><th>时间</th>${days.map(function(d){return'<th>'+d+'</th>'}).join('')}</tr></thead>
+        <tbody id="psBody">
+          ${renderPeriodRows(periods,'personal')}
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:12px">点击空格添加课程，蓝色高亮为语文课，橙色圆点标记实验课需准备器材。</div>
+  `;
+  bindScheduleCellClick('personal');
+}
+function renderPeriodRows(periods,type){
+  var days=['周一','周二','周三','周四','周五'];
+  var html='';
+  periods.forEach(function(p,idx){
+    html+='<tr>';
+    html+='<td class="time-col"><div style="font-weight:600">'+p.name+'</div><div>'+p.time+'</div></td>';
+    for(var d=1;d<=5;d++){
+      var cell=getScheduleCell(type,d,idx+1);
+      var cls='cell';
+      if(cell){
+        cls+=' has-class';
+        if(type==='personal'&&cell.subject&&cell.subject.indexOf('语文')>=0)cls+=' chinese';
+      }
+      var expBadge=cell&&cell.equipment?'<div class="badge-exp"></div>':'';
+      var content=cell?'<div class="subj">'+escapeHtml(cell.subject||'')+'</div>'+(cell.chapter?'<div class="meta">'+escapeHtml(cell.chapter)+'</div>':'')+(cell.equipment?'<div class="meta" style="color:var(--orange)">器材:'+escapeHtml(cell.equipment)+'</div>':''):'';
+      html+='<td class="'+cls+'" data-type="'+type+'" data-day="'+d+'" data-period="'+(idx+1)+'">'+expBadge+content+'</td>';
+    }
+    html+='</tr>';
+    // Insert lunch/activity rows
+    if(p.name==='第四节'){
+      html+='<tr class="lunch-row"><td class="time-col">午间</td><td colspan="5">☀️ 午读时间</td></tr>';
+    }
+  });
+  return html;
+}
+function getScheduleCell(type,day,period){
+  var arr=type==='personal'?state.personalSchedule:state.classSchedule;
+  return arr.find(function(p){return p.weekDay==day&&p.period==period});
+}
+function bindScheduleCellClick(type){
+  document.querySelectorAll('.cell[data-type="'+type+'"]').forEach(function(td){
+    td.addEventListener('click',function(){
+      showScheduleCellModal(type,parseInt(td.dataset.day),parseInt(td.dataset.period));
+    });
+  });
+}
+window.showScheduleCellModal=function(type,day,period){
+  var cell=getScheduleCell(type,day,period);
+  var dayName=['','周一','周二','周三','周四','周五'][day];
+  showModal(`
+    <div class="modal-title modal-sm">${dayName} · 第${period}节</div>
+    <div class="form-row"><label>${type==='personal'?'课程名称':'学科'}</label><input type="text" class="input" id="scSubject" value="${cell?escapeHtml(cell.subject||''):''}" placeholder="${type==='personal'?'如：六语文':'如：数学'}"></div>
+    ${type==='personal'?'<div class="form-row"><label>授课章节</label><input type="text" class="input" id="scChapter" value="'+(cell?escapeHtml(cell.chapter||''):'')+'" placeholder="如：《草原》第一课时"></div><div class="form-row"><label>实验器材准备</label><input type="text" class="input" id="scEquipment" value="'+(cell?escapeHtml(cell.equipment||''):'')+'" placeholder="如：无 / 投影仪 / 实验器材"></div>':'<div class="form-row"><label>任课教师</label><input type="text" class="input" id="scTeacher" value="'+(cell?escapeHtml(cell.teacher||''):'')+'" placeholder="任课教师"></div><div class="form-row"><label>类型</label><select class="select" id="scIsActivity"><option value="0" '+(!cell?.isActivity?'selected':'')+'>正课</option><option value="1" '+(cell?.isActivity?'selected':'')+'>班级活动</option></select></div>'}
+    <div class="modal-actions">
+      ${cell?'<button class="btn btn-danger" onclick="delScheduleCell(\''+type+'\','+day+','+period+')" style="margin-right:auto">删除</button>':''}
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-primary" onclick="saveScheduleCell('${type}',${day},${period})">${cell?'更新':'添加'}</button>
+    </div>
+  `);
+};
+window.saveScheduleCell=function(type,day,period){
+  var arr=type==='personal'?state.personalSchedule:state.classSchedule;
+  var cell=arr.find(function(p){return p.weekDay==day&&p.period==period});
+  var data={weekDay:day,period:period,subject:$('#scSubject').value};
+  if(type==='personal'){
+    data.chapter=$('#scChapter')?.value||'';
+    data.equipment=$('#scEquipment')?.value||'';
+  }else{
+    data.teacher=$('#scTeacher')?.value||'';
+    data.isActivity=$('#scIsActivity')?.value==='1';
+  }
+  if(cell)Object.assign(cell,data);
+  else{data.id=uid();arr.push(data)}
+  saveState();closeModal();
+  if(type==='personal')renderPersonalSchedule($('#content'));
+  else renderClassSchedule($('#content'));
+  toast('已保存');
+};
+window.delScheduleCell=function(type,day,period){
+  if(!confirm('确定删除此课程？'))return;
+  var arr=type==='personal'?state.personalSchedule:state.classSchedule;
+  var idx=arr.findIndex(function(p){return p.weekDay==day&&p.period==period});
+  if(idx>=0)arr.splice(idx,1);
+  saveState();closeModal();
+  if(type==='personal')renderPersonalSchedule($('#content'));
+  else renderClassSchedule($('#content'));
+  toast('已删除');
+};
+window.showPeriodModal=function(){
+  var periods=getPeriods();
+  showModal(`
+    <div class="modal-title">编辑课时时间</div>
+    <div class="note">时间列格式自定义，修改后课表自动更新</div>
+    <div id="periodList" style="max-height:400px;overflow-y:auto;margin:12px 0">
+      ${periods.map(function(p,i){
+        return '<div class="list-item"><input type="text" class="input" style="width:100px" value="'+escapeHtml(p.name)+'" data-pidx="'+i+'" data-field="name"><input type="text" class="input" style="width:140px" value="'+escapeHtml(p.time)+'" data-pidx="'+i+'" data-field="time"></div>';
+      }).join('')}
+    </div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="savePeriods()">保存</button></div>
+  `);
+};
+window.savePeriods=function(){
+  var periods=[];
+  document.querySelectorAll('[data-pidx]').forEach(function(inp){
+    var idx=parseInt(inp.dataset.pidx);
+    if(!periods[idx])periods[idx]={};
+    periods[idx][inp.dataset.field]=inp.value;
+  });
+  state.periods=periods;
+  saveState();closeModal();
+  renderPersonalSchedule($('#content'));
+  toast('时间已更新');
+};
+window.exportScheduleImage=function(type){
+  var wrapId=type==='personal'?'personalScheduleWrap':'classScheduleWrap';
+  var el=document.getElementById(wrapId);
+  if(!el){toast('未找到课表');return}
+  html2canvas(el,{backgroundColor:'#ffffff',scale:2}).then(function(canvas){
+    var link=document.createElement('a');
+    link.href=canvas.toDataURL('image/png');
+    link.download=(type==='personal'?'个人授课课表':'班级全局课表')+'.png';
+    link.click();
+    toast('图片已导出');
+  });
+};
+window.exportScheduleExcel=function(type){
+  var periods=getPeriods();
+  var days=['周一','周二','周三','周四','周五'];
+  var arr=type==='personal'?state.personalSchedule:state.classSchedule;
+  var rows=periods.map(function(p,idx){
+    var row={'时间':p.name+' '+p.time};
+    for(var d=1;d<=5;d++){
+      var cell=arr.find(function(x){return x.weekDay==d&&x.period==(idx+1)});
+      row[days[d-1]]=cell?(cell.subject+(type==='personal'?(cell.chapter?'('+cell.chapter+')':''):'')):'';
+    }
+    return row;
+  });
+  exportExcel(rows,type==='personal'?'个人授课课表':'班级全局课表');
+};
+
+/* ===== Class Schedule ===== */
+function renderClassSchedule(c){
+  var periods=getPeriods();
+  var days=['周一','周二','周三','周四','周五'];
+  c.innerHTML=`
+    <div class="filter-bar">
+      <button class="btn btn-outline" onclick="exportScheduleImage('class')">${icon('image',14)} 导出图片</button>
+      <button class="btn btn-outline" onclick="exportScheduleExcel('class')">⬇ 导出Excel</button>
+      <span class="note">班会、班级活动以绿色底色标记</span>
+    </div>
+    <div class="schedule-wrap" id="classScheduleWrap">
+      <table class="schedule-grid">
+        <thead><tr><th>时间</th>${days.map(function(d){return'<th>'+d+'</th>'}).join('')}</tr></thead>
+        <tbody>
+          ${renderPeriodRows(periods,'class')}
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:12px">点击空格添加班级课程，可标记班级活动，快速核查与正课冲突。</div>
+  `;
+  // Override cell rendering for class schedule activity styling
+  bindScheduleCellClick('class');
+  // Apply activity styling
+  state.classSchedule.forEach(function(cs){
+    if(cs.isActivity||cs.subject==='班会'){
+      var td=document.querySelector('.cell[data-type="class"][data-day="'+cs.weekDay+'"][data-period="'+cs.period+'"]');
+      if(td)td.style.background='#E8F8EC';
+    }
+  });
+}
+
+/* ===== Swap Class Management ===== */
+function renderSwap(c){
+  var week=getCurrentWeek();
+  c.innerHTML=`
+    <div class="filter-bar">
+      <button class="btn btn-primary" onclick="showSwapModal()">+ 录入调课</button>
+      <button class="btn btn-outline" onclick="exportSwapExcel()">⬇ 导出台账</button>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('refresh',20)}</div><div class="stat-label">总调课次数</div><div class="stat-value" style="color:var(--blue)">${state.swapClasses.length}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#F0EDFF;color:var(--purple)">${icon('calendar',20)}</div><div class="stat-label">本周调课</div><div class="stat-value" style="color:var(--purple)">${state.swapClasses.filter(function(s){return getWeekFromDate(s.date)===week}).length}</div></div>
+    </div>
+    <div class="tbl"><table>
+      <thead><tr><th>日期</th><th>第几周</th><th>调课类型</th><th>原课</th><th>调入课</th><th>调课双方</th><th>原因</th><th>操作</th></tr></thead>
+      <tbody id="swapTableBody"></tbody>
+    </table></div>
+  `;
+  renderSwapTable();
+}
+function renderSwapTable(){
+  var tbody=$('#swapTableBody');
+  if(!tbody)return;
+  if(!state.swapClasses.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><div class="ei">'+icon('refresh',36)+'</div>暂无调课记录</div></td></tr>';return}
+  tbody.innerHTML=state.swapClasses.map(function(s){
+    return '<tr><td>'+formatDate(s.date)+'</td><td>第'+getWeekFromDate(s.date)+'周</td><td><span class="tag '+({swap:'tag-orange',makeup:'tag-blue',change:'tag-purple'}[s.type]||'tag-gray')+'">'+({swap:'换课',makeup:'补课',change:'调课'}[s.type]||s.type)+'</span></td><td>'+escapeHtml(s.originalClass||'')+'</td><td>'+escapeHtml(s.newClass||'')+'</td><td>'+escapeHtml(s.parties||'')+'</td><td>'+escapeHtml(s.reason||'')+'</td><td><button class="btn btn-sm btn-outline" onclick="showSwapModal(\''+s.id+'\')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delSwap(\''+s.id+'\')">删除</button></td></tr>';
+  }).join('');
+}
+window.showSwapModal=function(id){
+  var s=id?state.swapClasses.find(function(x){return x.id===id}):{};
+  showModal(`
+    <div class="modal-title">${id?'编辑调课':'录入调课/补课'}</div>
+    <div class="form-grid">
+      <div class="form-row"><label>日期</label><input type="date" class="input" id="swapDate" value="${s.date||todayStr()}"></div>
+      <div class="form-row"><label>类型</label><select class="select" id="swapType"><option value="swap" ${s.type==='swap'?'selected':''}>换课</option><option value="change" ${s.type==='change'?'selected':''}>调课</option><option value="makeup" ${s.type==='makeup'?'selected':''}>补课</option></select></div>
+      <div class="form-row"><label>原课程</label><input type="text" class="input" id="swapOrig" value="${escapeHtml(s.originalClass||'')}" placeholder="如：周三第3节语文"></div>
+      <div class="form-row"><label>调入课程</label><input type="text" class="input" id="swapNew" value="${escapeHtml(s.newClass||'')}" placeholder="如：周五第2节语文"></div>
+    </div>
+    <div class="form-row"><label>调课双方</label><input type="text" class="input" id="swapParties" value="${escapeHtml(s.parties||'')}" placeholder="如：张老师 ↔ 李老师"></div>
+    <div class="form-row"><label>原因</label><textarea id="swapReason" placeholder="调课原因...">${escapeHtml(s.reason||'')}</textarea></div>
+    <div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="saveSwap('${id||''}')">保存</button></div>
+  `);
+};
+window.saveSwap=function(id){
+  var data={date:$('#swapDate').value,type:$('#swapType').value,originalClass:$('#swapOrig').value,newClass:$('#swapNew').value,parties:$('#swapParties').value,reason:$('#swapReason').value};
+  if(id){var s=state.swapClasses.find(function(x){return x.id===id});if(s)Object.assign(s,data)}
+  else{data.id=uid();state.swapClasses.push(data)}
+  saveState();closeModal();renderSwapTable();toast('已保存');
+  // Auto-update schedule if needed (simplified: just notify)
+  if(data.type==='swap'||data.type==='change')toast('调课已录入，请前往课表手动更新');
+};
+window.delSwap=function(id){if(!confirm('确定删除？'))return;state.swapClasses=state.swapClasses.filter(function(s){return s.id!==id});saveState();renderSwapTable();toast('已删除')};
+window.exportSwapExcel=function(){
+  if(!state.swapClasses.length){toast('暂无数据');return}
+  var rows=state.swapClasses.map(function(s){
+    return{'日期':s.date,'第几周':'第'+getWeekFromDate(s.date)+'周','类型':{swap:'换课',makeup:'补课',change:'调课'}[s.type]||s.type,'原课程':s.originalClass,'调入课程':s.newClass,'调课双方':s.parties,'原因':s.reason};
+  });
+  exportExcel(rows,'调课台账');
+};
+
+/* ===== Init ===== */
+function init(){
+  loadState();
+  // Seed sample data if empty
+  if(!state.students.length){
+    var sampleNames=['张明','李华','王芳','刘洋','陈静','杨光','赵磊','孙琳','周杰','吴越','郑薇','王强','李娜','张伟','黄磊'];
+    sampleNames.forEach(function(name,i){
+      state.students.push({id:uid(),name:name,studentId:'2026'+String(i+1).padStart(3,'0'),class:i%2===0?'1班':'2班',level:i<3?'培优':(i>11?'补差':''),parentContact:'',notes:i<3?'语文基础扎实，阅读理解强':(i>11?'基础薄弱，需加强默写':'')});
+    });
+  }
+  if(!state.exams.length){
+    state.exams.push({id:uid(),name:'入学摸底测',type:'unit',date:state.settings.startDate||todayStr(),class:'1班',scores:state.students.map(function(s){return{studentId:s.id,score:Math.floor(Math.random()*30+70)}}),knowledgePoints:'字词基础:8,阅读理解:12,古诗文:6'});
+    state.exams.push({id:uid(),name:'第一单元测试',type:'unit',date:todayStr(),class:'1班',scores:state.students.map(function(s){return{studentId:s.id,score:Math.floor(Math.random()*30+70)}}),knowledgePoints:'修辞手法:5,文言文:7,作文:9'});
+  }
+  if(!state.homework.length){
+    state.homework.push({id:uid(),title:'第一课生字词抄写',type:'base',chapter:'第一单元',class:'1班',assignedDate:todayStr(),dueDate:todayStr(),submissions:state.students.map(function(s){return{studentId:s.id,completed:Math.random()>0.2,score:''}})});
+    state.homework.push({id:uid(),title:'《草原》阅读理解',type:'advanced',chapter:'第一单元',class:'1班',assignedDate:todayStr(),dueDate:todayStr(),submissions:state.students.map(function(s){return{studentId:s.id,completed:Math.random()>0.3,score:''}})});
+  }
+  if(!state.todos.length){
+    state.todos.push({id:uid(),title:'准备第二单元课件',type:'备课',date:todayStr(),completed:false});
+    state.todos.push({id:uid(),title:'月考试卷命题',type:'命题',date:todayStr(),completed:false});
+    state.todos.push({id:uid(),title:'教研组会议',type:'教研',date:todayStr(),completed:false});
+  }
+  if(!state.personalSchedule.length){
+    var sampleSchedule=[
+      {weekDay:1,period:1,subject:'六语文',chapter:'《草原》第一课时',equipment:''},
+      {weekDay:1,period:3,subject:'六语文',chapter:'《草原》第二课时',equipment:''},
+      {weekDay:2,period:2,subject:'六语文',chapter:'古诗词三首',equipment:'投影仪'},
+      {weekDay:3,period:1,subject:'六语文',chapter:'习作指导',equipment:''},
+      {weekDay:4,period:4,subject:'六语文',chapter:'语文园地一',equipment:''},
+      {weekDay:5,period:2,subject:'六语文',chapter:'单元复习',equipment:''},
+      {weekDay:5,period:5,subject:'六语文',chapter:'作文讲评',equipment:''}
+    ];
+    sampleSchedule.forEach(function(p){p.id=uid();state.personalSchedule.push(p)});
+  }
+  if(!state.classSchedule.length){
+    var sampleClass=[
+      {weekDay:1,period:1,subject:'语文',teacher:'本人'},
+      {weekDay:1,period:2,subject:'数学',teacher:'张老师'},
+      {weekDay:1,period:3,subject:'语文',teacher:'本人'},
+      {weekDay:1,period:4,subject:'英语',teacher:'李老师'},
+      {weekDay:1,period:5,subject:'体育',teacher:'王老师'},
+      {weekDay:1,period:6,subject:'美术',teacher:'赵老师'},
+      {weekDay:1,period:7,subject:'班会',teacher:'本人',isActivity:true},
+      {weekDay:2,period:1,subject:'数学',teacher:'张老师'},
+      {weekDay:2,period:2,subject:'语文',teacher:'本人'},
+      {weekDay:2,period:3,subject:'英语',teacher:'李老师'},
+      {weekDay:2,period:4,subject:'语文',teacher:'本人'},
+      {weekDay:2,period:5,subject:'音乐',teacher:'孙老师'},
+      {weekDay:2,period:6,subject:'科学',teacher:'周老师'},
+      {weekDay:3,period:1,subject:'语文',teacher:'本人'},
+      {weekDay:3,period:2,subject:'数学',teacher:'张老师'},
+      {weekDay:3,period:3,subject:'道法',teacher:'吴老师'},
+      {weekDay:3,period:4,subject:'英语',teacher:'李老师'},
+      {weekDay:3,period:5,subject:'体育',teacher:'王老师'},
+      {weekDay:4,period:1,subject:'数学',teacher:'张老师'},
+      {weekDay:4,period:2,subject:'英语',teacher:'李老师'},
+      {weekDay:4,period:3,subject:'科学',teacher:'周老师'},
+      {weekDay:4,period:4,subject:'语文',teacher:'本人'},
+      {weekDay:4,period:5,subject:'信息技术',teacher:'郑老师'},
+      {weekDay:5,period:1,subject:'英语',teacher:'李老师'},
+      {weekDay:5,period:2,subject:'语文',teacher:'本人'},
+      {weekDay:5,period:3,subject:'数学',teacher:'张老师'},
+      {weekDay:5,period:4,subject:'道法',teacher:'吴老师'},
+      {weekDay:5,period:5,subject:'语文',teacher:'本人'},
+      {weekDay:5,period:6,subject:'劳动',teacher:'刘老师'}
+    ];
+    sampleClass.forEach(function(p){p.id=uid();state.classSchedule.push(p)});
+  }
+  saveState();
+  checkFirstRun();
+  // Bind nav
+  document.querySelectorAll('.nav-item[data-view]').forEach(function(n){
+    n.addEventListener('click',function(){navigateTo(n.dataset.view)});
+  });
+}
+init();
+})();
+</script>
+</body>
+</html>
