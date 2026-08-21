@@ -289,6 +289,8 @@ textarea{resize:vertical;min-height:60px}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script>
 (function(){
 'use strict';
@@ -412,6 +414,265 @@ function icon(name,size){
   size=size||18;
   var path=ICONS[name]||'';
   return '<svg class="icon-svg" width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+path+'</svg>';
+}
+
+/* ===== Universal Document Import ===== */
+// PDF.js worker
+if(window.pdfjsLib){window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js'}
+
+// Section-specific parse configs
+var IMPORT_CONFIG={
+  homework:{name:'作业',accept:'.docx,.pdf,.xlsx,.xls,.jpg,.jpeg,.png',fields:['作业标题','类型','章节','班级','布置日期','截止日期'],
+    parse:function(row){
+      return{id:uid(),title:row['作业标题']||row['标题']||'',type:{'基础':'base','提升':'advanced','中考专项':'exam','base':'base','advanced':'advanced','exam':'exam'}[row['类型']||row['分类']||'']||'base',
+      chapter:row['章节']||'',class:row['班级']||'',assignedDate:row['布置日期']||todayStr(),dueDate:row['截止日期']||todayStr(),
+      submissions:state.students.map(function(s){return{studentId:s.id,completed:false,score:''}})};
+    },target:'homework'},
+  questionBank:{name:'题目',accept:'.docx,.pdf,.xlsx,.xls,.jpg,.jpeg,.png',fields:['题目内容','类型','章节','难度','答案'],
+    parse:function(row){
+      return{id:uid(),content:row['题目内容']||row['内容']||'',type:row['类型']||'基础',chapter:row['章节']||'',difficulty:row['难度']||'★',answer:row['答案']||row['参考答案']||''};
+    },target:'questionBank'},
+  dictation:{name:'默写错题',accept:'.docx,.pdf,.xlsx,.xls,.jpg,.jpeg,.png',fields:['日期','学生','默写内容','错误字词','正确率'],
+    parse:function(row){
+      var stu=state.students.find(function(s){return s.name===(row['学生']||row['姓名']||'')});
+      return{id:uid(),date:row['日期']||todayStr(),studentId:stu?stu.id:(state.students[0]?state.students[0].id:''),content:row['默写内容']||row['内容']||'',errors:row['错误字词']||row['错词']||'',rate:row['正确率']||''};
+    },target:'dictations'},
+  grades:{name:'成绩',accept:'.docx,.pdf,.xlsx,.xls,.jpg,.jpeg,.png',fields:['考试名称','类型','日期','班级'],
+    parse:function(row){
+      return{id:uid(),name:row['考试名称']||row['名称']||'',type:{'单元测':'unit','月考':'monthly','期中':'mid','期末':'final','实验':'exp','unit':'unit','monthly':'monthly','mid':'mid','final':'final','exp':'exp'}[row['类型']||'']||'unit',
+      date:row['日期']||todayStr(),class:row['班级']||'1班',scores:state.students.map(function(s){return{studentId:s.id,score:''}})};
+    },target:'exams'},
+  students:{name:'学生',accept:'.docx,.pdf,.xlsx,.xls,.jpg,.jpeg,.png',fields:['姓名','学号','班级','分层','家长联系方式','备注'],
+    parse:function(row){
+      return{id:uid(),name:row['姓名']||row['名称']||'',studentId:row['学号']||'',class:row['班级']||'1班',level:row['分层']||'',parentContact:row['家长联系方式']||row['联系方式']||'',notes:row['备注']||''};
+    },target:'students'},
+  personalSchedule:{name:'个人课表',accept:'.docx,.pdf,.xlsx,.xls,.jpg,.jpeg,.png',fields:['星期','节次','课程','授课章节','实验器材'],
+    parse:function(row){
+      var wd={'一':1,'二':2,'三':3,'四':4,'五':5,'周一':1,'周二':2,'周三':3,'周四':4,'周五':5}[row['星期']||'']||parseInt(row['星期']||'1');
+      return{weekDay:wd,period:parseInt(row['节次']||row['节']||'1'),subject:row['课程']||row['科目']||'',chapter:row['授课章节']||row['章节']||'',equipment:row['实验器材']||row['器材']||''};
+    },target:'personalSchedule'},
+  classSchedule:{name:'班级课表',accept:'.docx,.pdf,.xlsx,.xls,.jpg,.jpeg,.png',fields:['星期','节次','学科','任课教师','类型'],
+    parse:function(row){
+      var wd={'一':1,'二':2,'三':3,'四':4,'五':5,'周一':1,'周二':2,'周三':3,'周四':4,'周五':5}[row['星期']||'']||parseInt(row['星期']||'1');
+      return{weekDay:wd,period:parseInt(row['节次']||row['节']||'1'),subject:row['学科']||row['课程']||'',teacher:row['任课教师']||row['教师']||'',isActivity:(row['类型']||'').indexOf('活动')>=0?1:0};
+    },target:'classSchedule'}
+};
+
+// Parse tabular data from plain text (extracted from Word/PDF)
+function parseTextToRows(text){
+  var lines=text.split(/\r?\n/).filter(function(l){return l.trim()});
+  if(!lines.length)return[];
+  // Try to detect delimiter (tab, multi-space, |, or comma)
+  var delimiter=null;
+  var sample=lines[0];
+  if(sample.indexOf('\t')>=0)delimiter='\t';
+  else if(sample.indexOf('|')>=0)delimiter='|';
+  else if(sample.indexOf('，')>=0)delimiter='，';
+  else if(sample.split(/\s{2,}/).length>1)delimiter='multi-space';
+  else if(sample.indexOf(',')>=0)delimiter=',';
+  
+  var rows=[];
+  if(!delimiter){
+    // Single column - just return as text rows
+    lines.forEach(function(l){rows.push({'内容':l.trim()})});
+    return rows;
+  }
+  
+  // First non-empty line might be header
+  var headers;
+  var dataStart=0;
+  if(delimiter==='multi-space'){
+    headers=lines[0].split(/\s{2,}/).map(function(h){return h.trim()});
+    dataStart=1;
+  }else{
+    headers=lines[0].split(delimiter).map(function(h){return h.trim()});
+    dataStart=1;
+  }
+  // Check if first line looks like a header (contains common field names)
+  var headerLike=headers.some(function(h){return['姓名','学号','班级','标题','类型','章节','日期','课程','学科','星期','节次','考试','名称'].some(function(k){return h.indexOf(k)>=0})});
+  if(!headerLike){
+    // No header, use generic column names
+    headers=headers.map(function(_,i){return'列'+(i+1)});
+    dataStart=0;
+  }
+  for(var i=dataStart;i<lines.length;i++){
+    var parts;
+    if(delimiter==='multi-space')parts=lines[i].split(/\s{2,}/);
+    else parts=lines[i].split(delimiter);
+    var row={};
+    headers.forEach(function(h,j){row[h]=(parts[j]||'').trim()});
+    if(Object.values(row).some(function(v){return v}))rows.push(row);
+  }
+  return rows;
+}
+
+// Universal document import handler
+window.importDocument=function(section){
+  var cfg=IMPORT_CONFIG[section];
+  if(!cfg){toast('未知的导入区域');return}
+  var input=document.createElement('input');
+  input.type='file';
+  input.accept=cfg.accept;
+  input.onchange=function(){
+    var file=input.files[0];
+    if(!file)return;
+    var ext=file.name.split('.').pop().toLowerCase();
+    if(['xlsx','xls'].indexOf(ext)>=0){
+      importExcelFile(file,section);
+    }else if(ext==='docx'){
+      importWordFile(file,section);
+    }else if(ext==='pdf'){
+      importPdfFile(file,section);
+    }else if(['jpg','jpeg','png','gif','bmp','webp'].indexOf(ext)>=0){
+      importImageFile(file,section);
+    }else{
+      toast('不支持的文件格式：'+ext);
+    }
+  };
+  input.click();
+};
+
+// Excel import handler
+function importExcelFile(file,section){
+  var cfg=IMPORT_CONFIG[section];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=new Uint8Array(e.target.result);
+      var wb=XLSX.read(data,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var json=XLSX.utils.sheet_to_json(ws);
+      var count=importRows(json,section);
+      toast('Excel导入成功，共'+count+'条'+cfg.name+'数据');
+    }catch(err){toast('Excel导入失败：'+err.message)}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Word (.docx) import handler
+function importWordFile(file,section){
+  var cfg=IMPORT_CONFIG[section];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    mammoth.extractRawText({arrayBuffer:e.target.result}).then(function(result){
+      var rows=parseTextToRows(result.value);
+      if(!rows.length){toast('文档中未检测到可导入的数据');return}
+      // Show preview modal
+      showImportPreview(section,rows);
+    }).catch(function(err){toast('Word文档解析失败：'+err.message)});
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// PDF import handler
+function importPdfFile(file,section){
+  var cfg=IMPORT_CONFIG[section];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var loadingTask=pdfjsLib.getDocument({data:e.target.result});
+    loadingTask.promise.then(function(pdf){
+      var totalPages=pdf.numPages;
+      var textContent='';
+      var pagePromises=[];
+      for(var i=1;i<=totalPages;i++){
+        pagePromises.push(pdf.getPage(i).then(function(page){
+          return page.getTextContent().then(function(tc){
+            var pageText='';
+            var lastY=null;
+            tc.items.forEach(function(item){
+              if(lastY!==null&&Math.abs(lastY-item.transform[5])>2)pageText+='\n';
+              pageText+=item.str;
+              lastY=item.transform[5];
+            });
+            return pageText;
+          });
+        }));
+      }
+      Promise.all(pagePromises).then(function(pagesText){
+        var fullText=pagesText.join('\n');
+        var rows=parseTextToRows(fullText);
+        if(!rows.length){toast('PDF中未检测到可导入的数据');return}
+        showImportPreview(section,rows);
+      });
+    }).catch(function(err){toast('PDF解析失败：'+err.message)});
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// Image import handler - show preview
+function importImageFile(file,section){
+  var cfg=IMPORT_CONFIG[section];
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var imgSrc=e.target.result;
+    showModal(
+      '<div class="modal-title">图片预览 — '+escapeHtml(file.name)+'</div>'+
+      '<div class="note">已导入图片，可参考图片内容手动录入'+cfg.name+'数据</div>'+
+      '<div style="margin:12px 0;text-align:center"><img src="'+imgSrc+'" style="max-width:100%;max-height:400px;border-radius:8px;border:1px solid var(--border)"/></div>'+
+      '<div class="modal-actions"><button class="btn btn-primary" onclick="closeModal()">关闭</button></div>'
+    );
+    toast('图片已加载，请参考图片内容录入数据');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Import preview modal - shows parsed data before confirming
+function showImportPreview(section,rows){
+  var cfg=IMPORT_CONFIG[section];
+  var preview=rows.slice(0,5).map(function(r){
+    return'<tr>'+Object.values(r).slice(0,cfg.fields.length).map(function(v){return'<td style="padding:6px 10px;border:1px solid var(--border);font-size:12px">'+escapeHtml(String(v||'').substring(0,30))+'</td>'}).join('')+'</tr>';
+  }).join('');
+  var headerHtml=cfg.fields.map(function(f){return'<th style="padding:6px 10px;border:1px solid var(--border);font-size:12px;background:var(--blue-bg);color:var(--blue)">'+f+'</th>'}).join('');
+  showModal(
+    '<div class="modal-title">文档预览 — '+cfg.name+'数据</div>'+
+    '<div class="note">检测到'+rows.length+'条数据，预览前5条。确认无误后点击导入。</div>'+
+    '<div class="tbl" style="max-height:300px;overflow-y:auto;margin:12px 0"><table style="width:100%;border-collapse:collapse"><thead><tr>'+headerHtml+'</tr></thead><tbody>'+preview+'</tbody></table></div>'+
+    '<div class="modal-actions"><button class="btn btn-outline" onclick="closeModal()">取消</button><button class="btn btn-primary" onclick="confirmImport(\''+section+'\')">确认导入'+rows.length+'条</button></div>'
+  );
+  // Store rows temporarily
+  window._pendingImportRows=rows;
+}
+
+// Confirm import from preview
+window.confirmImport=function(section){
+  var rows=window._pendingImportRows||[];
+  if(!rows.length){closeModal();toast('无数据可导入');return}
+  var count=importRows(rows,section);
+  window._pendingImportRows=null;
+  closeModal();
+  toast('导入成功，共'+count+'条'+IMPORT_CONFIG[section].name+'数据');
+};
+
+// Core import logic - parses rows and saves to state
+function importRows(rows,section){
+  var cfg=IMPORT_CONFIG[section];
+  var count=0;
+  rows.forEach(function(row){
+    // Skip empty rows
+    var hasValue=Object.values(row).some(function(v){return v&&String(v).trim()});
+    if(!hasValue)return;
+    var parsed=cfg.parse(row);
+    if(section==='homework'){state.homework.push(parsed);count++}
+    else if(section==='questionBank'){questionBank.push(parsed);state.questionBank=questionBank;count++}
+    else if(section==='dictation'){if(!state.dictations)state.dictations=[];state.dictations.push(parsed);count++}
+    else if(section==='grades'){state.exams.push(parsed);count++}
+    else if(section==='students'){state.students.push(parsed);count++}
+    else if(section==='personalSchedule'){
+      // Replace existing cell if same day+period
+      state.personalSchedule=state.personalSchedule.filter(function(p){return!(p.weekDay==parsed.weekDay&&p.period==parsed.period)});
+      if(parsed.subject)state.personalSchedule.push(parsed);
+      count++;
+    }
+    else if(section==='classSchedule'){
+      state.classSchedule=state.classSchedule.filter(function(p){return!(p.weekDay==parsed.weekDay&&p.period==parsed.period)});
+      if(parsed.subject)state.classSchedule.push(parsed);
+      count++;
+    }
+  });
+  saveState();
+  // Re-render current view
+  if(currentView)renderView(currentView);
+  return count;
 }
 
 /* ===== Navigation ===== */
@@ -689,7 +950,7 @@ function renderReflection(c){
         <option value="${state.settings.semester}">本学期</option>
       </select>
       <button class="btn btn-primary" onclick="showReflectionModal()">+ 新增反思</button>
-      <button class="btn btn-outline" onclick="exportReflectionsWord()">⬇ 导出Word</button>
+      <button class="btn btn-outline" onclick="exportReflectionsWord()">${icon('download',14)} 导出Word</button>
     </div>
     <div class="tbl">
       <table>
@@ -814,9 +1075,8 @@ function renderHwAssign(c){
   c.innerHTML=`
     <div class="filter-bar">
       <button class="btn btn-primary" onclick="showHomeworkModal()">+ 布置作业</button>
-      <button class="btn btn-outline" onclick="exportHwExcel()">⬇ 导出Excel</button>
-      <button class="btn btn-outline" onclick="document.getElementById('hwImportInput').click()">⬆ 导入Excel</button>
-      <input type="file" id="hwImportInput" accept=".xlsx,.xls" style="display:none" onchange="importHwExcel(this)">
+      <button class="btn btn-outline" onclick="exportHwExcel()">${icon('download',14)} 导出Excel</button>
+      <button class="btn btn-outline" onclick="importDocument('homework')">${icon('upload',14)} 导入文档</button>
     </div>
     <div class="tbl">
       <table>
@@ -831,6 +1091,7 @@ function renderHwBank(c){
   c.innerHTML=`
     <div class="filter-bar">
       <button class="btn btn-primary" onclick="showQuestionModal()">+ 添加题目</button>
+      <button class="btn btn-outline" onclick="importDocument('questionBank')">${icon('upload',14)} 导入文档</button>
       <select class="select" id="qBankFilter" onchange="renderQBankTable()" style="min-width:120px">
         <option value="">全部类型</option>
         <option value="基础">基础题</option>
@@ -849,6 +1110,7 @@ function renderHwDictation(c){
   c.innerHTML=`
     <div class="filter-bar">
       <button class="btn btn-primary" onclick="showDictationModal()">+ 归集错题</button>
+      <button class="btn btn-outline" onclick="importDocument('dictation')">${icon('upload',14)} 导入文档</button>
     </div>
     <div class="tbl"><table>
       <thead><tr><th>日期</th><th>学生</th><th>默写内容</th><th>错误字词</th><th>正确率</th><th>操作</th></tr></thead>
@@ -1053,7 +1315,8 @@ function renderGrades(c){
   c.innerHTML=`
     <div class="filter-bar">
       <button class="btn btn-primary" onclick="showExamModal()">+ 新增测试</button>
-      <button class="btn btn-outline" onclick="exportGradesExcel()">⬇ 导出Excel</button>
+      <button class="btn btn-outline" onclick="exportGradesExcel()">${icon('download',14)} 导出Excel</button>
+      <button class="btn btn-outline" onclick="importDocument('grades')">${icon('upload',14)} 导入文档</button>
       <button class="btn btn-outline" onclick="exportGradeReportWord()">${icon('file',14)} 学情报告</button>
     </div>
     <div class="tbl"><table>
@@ -1282,7 +1545,8 @@ function renderStudents(c){
   c.innerHTML=`
     <div class="filter-bar">
       <button class="btn btn-primary" onclick="showStudentModal()">+ 添加学生</button>
-      <button class="btn btn-outline" onclick="exportStudentsExcel()">⬇ 导出名单</button>
+      <button class="btn btn-outline" onclick="exportStudentsExcel()">${icon('download',14)} 导出名单</button>
+      <button class="btn btn-outline" onclick="importDocument('students')">${icon('upload',14)} 导入文档</button>
       <input type="text" class="input" id="stuSearch" placeholder="搜索学生..." oninput="renderStudentGrid()" style="min-width:200px">
     </div>
     <div class="student-grid" id="stuGrid"></div>
@@ -1346,15 +1610,6 @@ function renderClassRoster(c){
       <div class="stat-card"><div class="stat-icon" style="background:#FFF3E0;color:var(--orange)">${icon('target',20)}</div><div class="stat-label">培优人数</div><div class="stat-value" style="color:var(--orange)">${state.students.filter(function(s){return s.level==='培优'}).length}</div></div>
     </div>
     <div class="card">
-      <div class="card-title">${icon('class2',16)} 班级基本信息</div>
-      <div class="form-grid">
-        <div class="form-row"><label>年级</label><input type="text" class="input" value="${state.settings.grade}" readonly></div>
-        <div class="form-row"><label>学期</label><input type="text" class="input" value="${state.settings.semester}" readonly></div>
-        <div class="form-row"><label>班主任</label><input type="text" class="input" id="className" value="${state.classInfo?.teacher||''}" placeholder="班主任姓名" onchange="saveClassInfo()"></div>
-        <div class="form-row"><label>班级口号</label><input type="text" class="input" id="classSlogan" value="${state.classInfo?.slogan||''}" placeholder="班级口号" onchange="saveClassInfo()"></div>
-      </div>
-    </div>
-    <div class="card">
       <div class="card-title">${icon('pie',16)} 班级成绩分布</div>
       <div class="chart-wrap"><canvas id="rosterChart"></canvas></div>
     </div>
@@ -1371,12 +1626,6 @@ function renderClassRoster(c){
     chartInstances.roster=new Chart(ctx,{type:'bar',data:{labels:Object.keys(ranges),datasets:[{label:'人数',data:Object.values(ranges),backgroundColor:['#34C759','#007AFF','#5AC8FA','#FF9500','#FF3B30'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,stepSize:1}}}});
   }
 }
-window.saveClassInfo=function(){
-  if(!state.classInfo)state.classInfo={};
-  state.classInfo.teacher=$('#className')?.value||'';
-  state.classInfo.slogan=$('#classSlogan')?.value||'';
-  saveState();
-};
 
 /* ===== Schedule Dashboard ===== */
 function renderScheduleDashboard(c){
@@ -1465,8 +1714,9 @@ function renderPersonalSchedule(c){
   c.innerHTML=`
     <div class="filter-bar">
       <button class="btn btn-primary" onclick="showPeriodModal()">+ 编辑时间</button>
+      <button class="btn btn-outline" onclick="importDocument('personalSchedule')">${icon('upload',14)} 导入文档</button>
       <button class="btn btn-outline" onclick="exportScheduleImage('personal')">${icon('image',14)} 导出图片</button>
-      <button class="btn btn-outline" onclick="exportScheduleExcel('personal')">⬇ 导出Excel</button>
+      <button class="btn btn-outline" onclick="exportScheduleExcel('personal')">${icon('download',14)} 导出Excel</button>
     </div>
     <div class="schedule-wrap" id="personalScheduleWrap">
       <table class="schedule-grid">
@@ -1616,8 +1866,9 @@ function renderClassSchedule(c){
   var days=['周一','周二','周三','周四','周五'];
   c.innerHTML=`
     <div class="filter-bar">
+      <button class="btn btn-outline" onclick="importDocument('classSchedule')">${icon('upload',14)} 导入文档</button>
       <button class="btn btn-outline" onclick="exportScheduleImage('class')">${icon('image',14)} 导出图片</button>
-      <button class="btn btn-outline" onclick="exportScheduleExcel('class')">⬇ 导出Excel</button>
+      <button class="btn btn-outline" onclick="exportScheduleExcel('class')">${icon('download',14)} 导出Excel</button>
       <span class="note">班会、班级活动以绿色底色标记</span>
     </div>
     <div class="schedule-wrap" id="classScheduleWrap">
@@ -1647,7 +1898,7 @@ function renderSwap(c){
   c.innerHTML=`
     <div class="filter-bar">
       <button class="btn btn-primary" onclick="showSwapModal()">+ 录入调课</button>
-      <button class="btn btn-outline" onclick="exportSwapExcel()">⬇ 导出台账</button>
+      <button class="btn btn-outline" onclick="exportSwapExcel()">${icon('download',14)} 导出台账</button>
     </div>
     <div class="stat-grid">
       <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('refresh',20)}</div><div class="stat-label">总调课次数</div><div class="stat-value" style="color:var(--blue)">${state.swapClasses.length}</div></div>
