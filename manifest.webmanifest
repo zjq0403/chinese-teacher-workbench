@@ -1,0 +1,39 @@
+{
+  "name": "初中语文教师工作台",
+  "short_name": "语文工作台",
+  "description": "人教版六年级语文教师一体化工作台，支持备课、作业评级、成绩分析、课表管理等功能，可离线使用。",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F0F2F5",
+  "theme_color": "#007AFF",
+  "categories": ["education", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "教学仪表盘",
+      "short_name": "仪表盘",
+      "url": "./#dashboard",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "作业管理",
+      "short_name": "作业",
+      "url": "./#homework",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "个人课表",
+      "short_name": "课表",
+      "url": "./#personal-schedule",
+      "icons": [{ "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
