@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>初中语文教师·班主任一体化工作台</title>
+<title>初中语文教师工作台</title>
 <style>
 /* ===== Reset & Variables ===== */
 :root{
@@ -248,11 +248,7 @@ textarea{resize:vertical;min-height:60px}
         <div class="nav-item" data-view="homework"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg></span>作业管理</div>
         <div class="nav-item" data-view="grades"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></span>成绩分析</div>
         <div class="nav-item" data-view="todos"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>学科待办</div>
-      </div>
-      <div class="nav-group">
-        <div class="nav-group-title">班主任工作</div>
         <div class="nav-item" data-view="students"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span>学生名单</div>
-        <div class="nav-item" data-view="classroster"><span class="icon"><svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/></svg></span>班级管理</div>
       </div>
       <div class="nav-group">
         <div class="nav-group-title">课表管理</div>
@@ -426,7 +422,7 @@ var IMPORT_CONFIG={
     parse:function(row){
       return{id:uid(),title:row['作业标题']||row['标题']||'',type:{'基础':'base','提升':'advanced','中考专项':'exam','base':'base','advanced':'advanced','exam':'exam'}[row['类型']||row['分类']||'']||'base',
       chapter:row['章节']||'',class:row['班级']||'',assignedDate:row['布置日期']||todayStr(),dueDate:row['截止日期']||todayStr(),
-      submissions:state.students.map(function(s){return{studentId:s.id,completed:false,score:''}})};
+      submissions:state.students.map(function(s){return{studentId:s.id,grade:''}})};
     },target:'homework'},
   questionBank:{name:'题目',accept:'.docx,.pdf,.xlsx,.xls,.jpg,.jpeg,.png',fields:['题目内容','类型','章节','难度','答案'],
     parse:function(row){
@@ -455,7 +451,11 @@ var IMPORT_CONFIG={
     parse:function(row){
       var wd={'一':1,'二':2,'三':3,'四':4,'五':5,'周一':1,'周二':2,'周三':3,'周四':4,'周五':5}[row['星期']||'']||parseInt(row['星期']||'1');
       return{weekDay:wd,period:parseInt(row['节次']||row['节']||'1'),subject:row['学科']||row['课程']||'',teacher:row['任课教师']||row['教师']||'',isActivity:(row['类型']||'').indexOf('活动')>=0?1:0};
-    },target:'classSchedule'}
+    },target:'classSchedule'},
+  hwGrades:{name:'作业评级',accept:'.docx,.pdf,.xlsx,.xls,.jpg,.jpeg,.png',fields:['姓名','等级'],
+    parse:function(row){
+      return{name:row['姓名']||row['学生姓名']||'',grade:(row['等级']||row['评级']||'').toString().toUpperCase().charAt(0)};
+    },target:'hwGrades'}
 };
 
 // Parse tabular data from plain text (extracted from Word/PDF)
@@ -668,6 +668,20 @@ function importRows(rows,section){
       if(parsed.subject)state.classSchedule.push(parsed);
       count++;
     }
+    else if(section==='hwGrades'){
+      // Match student name to grade
+      var hwId=$('#gradeHwSelect')?$('#gradeHwSelect').value:'';
+      if(!hwId)return;
+      var hw=state.homework.find(function(x){return x.id===hwId});
+      if(!hw)return;
+      if(!hw.submissions)hw.submissions=state.students.map(function(s){return{studentId:s.id,grade:''}});
+      var stu=state.students.find(function(s){return s.name===parsed.name});
+      if(stu&&parsed.grade&&['A','B','C','D','F'].indexOf(parsed.grade)>=0){
+        var sub=hw.submissions.find(function(s){return s.studentId===stu.id});
+        if(sub)sub.grade=parsed.grade;
+        count++;
+      }
+    }
   });
   saveState();
   // Re-render current view
@@ -684,7 +698,7 @@ function navigateTo(view){
   var titles={
     'dashboard':'教学仪表盘','reflection':'课后反思','homework':'作业管理',
     'grades':'成绩分析','todos':'学科待办备忘','students':'学生名单管理',
-    'classroster':'班级管理','schedule-dashboard':'课表总览',
+    'schedule-dashboard':'课表总览',
     'personal-schedule':'个人授课课表','class-schedule':'班级全局课表','swap':'调课管理'
   };
   $('#pageTitle').textContent=titles[view]||'';
@@ -704,7 +718,6 @@ function renderView(view){
     case 'grades':renderGrades(c);break;
     case 'todos':renderTodos(c);break;
     case 'students':renderStudents(c);break;
-    case 'classroster':renderClassRoster(c);break;
     case 'schedule-dashboard':renderScheduleDashboard(c);break;
     case 'personal-schedule':renderPersonalSchedule(c);break;
     case 'class-schedule':renderClassSchedule(c);break;
@@ -803,15 +816,15 @@ function renderDashboard(c){
       </div>
       <div class="stat-card">
         <div class="stat-icon" style="background:#E8F8EC;color:var(--green)">${icon('todos',20)}</div>
-        <div class="stat-label">作业完成率</div>
+        <div class="stat-label">作业评级率</div>
         <div class="stat-value" style="color:var(--green)">${hwRate}%</div>
-        <div class="stat-sub">本周作业提交情况</div>
+        <div class="stat-sub">近期作业评级进度</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon" style="background:#FFF3E0;color:var(--orange)">${icon('clock',20)}</div>
-        <div class="stat-label">待批改任务</div>
+        <div class="stat-label">待评级任务</div>
         <div class="stat-value" style="color:var(--orange)">${pendingGrading.count}</div>
-        <div class="stat-sub">${pendingGrading.detail||'暂无待批改'}</div>
+        <div class="stat-sub">${pendingGrading.detail||'暂无待评级'}</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon" style="background:#FFF0F0;color:var(--red)">${icon('flame',20)}</div>
@@ -895,17 +908,17 @@ function calcAvgScore(){
 function calcHwRate(){
   var recent=state.homework.slice(-5);
   if(!recent.length)return 0;
-  var total=0,submitted=0;
+  var total=0,graded=0;
   recent.forEach(function(h){
     if(h.submissions&&h.submissions.length){
-      h.submissions.forEach(function(s){total++;if(s.completed)submitted++})
+      h.submissions.forEach(function(s){total++;if(s.grade)graded++})
     }
   });
-  return total?Math.round(submitted/total*100):0;
+  return total?Math.round(graded/total*100):0;
 }
 function calcPendingGrading(){
-  var pending=state.homework.filter(function(h){return h.submissions&&h.submissions.some(function(s){return s.completed&&!s.scored})});
-  return{count:pending.length,detail:pending.length?pending[0].title:'暂无待批改'};
+  var pending=state.homework.filter(function(h){return h.submissions&&h.submissions.some(function(s){return!s.grade})});
+  return{count:pending.length,detail:pending.length?pending[0].title:'暂无待评级'};
 }
 function calcHighFreqErrors(){
   var errors={};
@@ -1050,6 +1063,8 @@ function renderHomework(c){
   c.innerHTML=`
     <div class="tabs" id="hwTabs">
       <button class="tab active" data-tab="assign">作业布置</button>
+      <button class="tab" data-tab="grading">作业评级</button>
+      <button class="tab" data-tab="ranking">积分排名</button>
       <button class="tab" data-tab="bank">分层题库</button>
       <button class="tab" data-tab="dictation">默写错题</button>
     </div>
@@ -1068,6 +1083,8 @@ function renderHwTab(tab){
   var c=$('#hwTabContent');
   c.innerHTML='';
   if(tab==='assign')renderHwAssign(c);
+  else if(tab==='grading')renderHwGrading(c);
+  else if(tab==='ranking')renderHwRanking(c);
   else if(tab==='bank')renderHwBank(c);
   else if(tab==='dictation')renderHwDictation(c);
 }
@@ -1080,7 +1097,7 @@ function renderHwAssign(c){
     </div>
     <div class="tbl">
       <table>
-        <thead><tr><th>布置日期</th><th>作业标题</th><th>类型</th><th>章节</th><th>班级</th><th>提交率</th><th>截止日期</th><th>操作</th></tr></thead>
+        <thead><tr><th>布置日期</th><th>作业标题</th><th>类型</th><th>章节</th><th>班级</th><th>已评级</th><th>截止日期</th><th>操作</th></tr></thead>
         <tbody id="hwTableBody"></tbody>
       </table>
     </div>
@@ -1128,9 +1145,9 @@ function renderHwTable(){
   if(!state.homework.length){tbody.innerHTML='<tr><td colspan="8"><div class="empty"><div class="ei">'+icon('homework',36)+'</div>暂无作业记录</div></td></tr>';return}
   tbody.innerHTML=state.homework.map(function(h){
     var sub=h.submissions||[];
-    var done=sub.filter(function(s){return s.completed}).length;
-    var rate=sub.length?Math.round(done/sub.length*100):0;
-    return '<tr><td>'+formatDate(h.assignedDate)+'</td><td>'+escapeHtml(h.title)+'</td><td><span class="tag '+({base:'tag-blue',advanced:'tag-purple',exam:'tag-red'}[h.type]||'tag-gray')+'">'+({base:'基础',advanced:'提升',exam:'中考专项'}[h.type]||h.type)+'</span></td><td>'+escapeHtml(h.chapter||'')+'</td><td>'+escapeHtml(h.class||'')+'</td><td>'+rate+'%<div class="progress"><span style="width:'+rate+'%"></span></div></td><td>'+formatDate(h.dueDate)+'</td><td><button class="btn btn-sm btn-outline" onclick="showHomeworkModal(\''+h.id+'\')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delHomework(\''+h.id+'\')">删除</button></td></tr>'
+    var graded=sub.filter(function(s){return s.grade}).length;
+    var rate=sub.length?Math.round(graded/sub.length*100):0;
+    return '<tr><td>'+formatDate(h.assignedDate)+'</td><td>'+escapeHtml(h.title)+'</td><td><span class="tag '+({base:'tag-blue',advanced:'tag-purple',exam:'tag-red'}[h.type]||'tag-gray')+'">'+({base:'基础',advanced:'提升',exam:'中考专项'}[h.type]||h.type)+'</span></td><td>'+escapeHtml(h.chapter||'')+'</td><td>'+escapeHtml(h.class||'')+'</td><td>'+rate+'%<div class="progress"><span style="width:'+rate+'%"></span></div></td><td>'+formatDate(h.dueDate)+'</td><td><button class="btn btn-sm btn-primary" onclick="goToGrading(\''+h.id+'\')">评级</button> <button class="btn btn-sm btn-outline" onclick="showHomeworkModal(\''+h.id+'\')">编辑</button> <button class="btn btn-sm btn-danger" onclick="delHomework(\''+h.id+'\')">删除</button></td></tr>'
   }).join('');
 }
 window.showHomeworkModal=function(id){
@@ -1146,9 +1163,10 @@ window.showHomeworkModal=function(id){
       <div class="form-row"><label>布置日期</label><input type="date" class="input" id="hwAssigned" value="${h.assignedDate||todayStr()}"></div>
       <div class="form-row"><label>截止日期</label><input type="date" class="input" id="hwDue" value="${h.dueDate||todayStr()}"></div>
     </div>
-    ${id?'<div class="form-row"><label>学生提交情况</label><div id="hwSubmissions">'+students.map(function(s){
+    ${id?'<div class="form-row"><label>学生等级（A+3分 B+2分 C+1分 D+0分 F-1分）</label><div id="hwSubmissions">'+students.map(function(s){
       var sub=(h.submissions||[]).find(function(x){return x.studentId===s.id});
-      return '<div class="list-item"><label class="checkbox"><input type="checkbox" data-sid="'+s.id+'" '+(sub&&sub.completed?'checked':'')+'> <span style="margin-left:4px">'+escapeHtml(s.name)+'</span></label><input type="number" class="input" style="width:80px" data-score-sid="'+s.id+'" placeholder="分数" value="'+(sub?sub.score||'':'')+'"></div>'
+      var g=sub?sub.grade||'':'';
+      return '<div class="list-item" style="cursor:pointer" onclick="event.stopPropagation()"><div class="li-main"><div class="li-title">'+escapeHtml(s.name)+'</div><div class="li-sub">'+(s.studentId||'')+' · '+(s.class||'')+'</div></div><select class="select" style="width:70px" data-grade-sid="'+s.id+'"><option value=""'+(!g?' selected':'')+'>—</option><option value="A"'+(g==='A'?' selected':'')+'>A</option><option value="B"'+(g==='B'?' selected':'')+'>B</option><option value="C"'+(g==='C'?' selected':'')+'>C</option><option value="D"'+(g==='D'?' selected':'')+'>D</option><option value="F"'+(g==='F'?' selected':'')+'>F</option></select></div>'
     }).join('')+'</div></div>':''}
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">取消</button>
@@ -1169,18 +1187,17 @@ window.saveHomework=function(id){
     var h=state.homework.find(function(x){return x.id===id});
     if(h){
       Object.assign(h,data);
-      // Update submissions
+      // Update submissions with grades
       var subs=[];
-      document.querySelectorAll('#hwSubmissions input[type=checkbox]').forEach(function(cb){
-        var sid=cb.dataset.sid;
-        var scoreInput=document.querySelector('[data-score-sid="'+sid+'"]');
-        subs.push({studentId:sid,completed:cb.checked,score:scoreInput?scoreInput.value:''});
+      document.querySelectorAll('#hwSubmissions select[data-grade-sid]').forEach(function(sel){
+        var sid=sel.dataset.gradeSid;
+        subs.push({studentId:sid,grade:sel.value||''});
       });
       h.submissions=subs;
     }
   }else{
     data.id=uid();
-    data.submissions=state.students.map(function(s){return{studentId:s.id,completed:false,score:''}});
+    data.submissions=state.students.map(function(s){return{studentId:s.id,grade:''}});
     state.homework.push(data);
   }
   saveState();
@@ -1195,18 +1212,277 @@ window.delHomework=function(id){
   renderHwTable();
   toast('已删除');
 };
-window.exportHwExcel=function(){
-  if(!state.homework.length){toast('暂无数据');return}
-  var rows=state.homework.map(function(h){
-    var subs=h.submissions||[];
-    var done=subs.filter(function(s){return s.completed}).length;
-    return{
-      '作业标题':h.title,'类型':{base:'基础',advanced:'提升',exam:'中考专项'}[h.type]||h.type,
-      '章节':h.chapter,'班级':h.class,'布置日期':h.assignedDate,'截止日期':h.dueDate,
-      '应交人数':subs.length,'已交人数':done,'提交率':subs.length?Math.round(done/subs.length*100)+'%':'0%'
+/* ===== Homework Grading & Ranking ===== */
+var GRADE_POINTS={A:3,B:2,C:1,D:0,F:-1};
+var GRADE_COLORS={A:'#34C759',B:'#007AFF',C:'#FF9500',D:'#86868B',F:'#FF3B30'};
+var GRADE_BG={A:'#E8F8EC',B:'#EAF2FF',C:'#FFF3E0',D:'#F5F5FA',F:'#FFF0F0'};
+
+// Jump to grading tab and auto-select a homework
+window.goToGrading=function(hwId){
+  document.querySelectorAll('#hwTabs .tab').forEach(function(t){
+    t.classList.toggle('active',t.dataset.tab==='grading');
+  });
+  renderHwTab('grading');
+  var sel=$('#gradeHwSelect');
+  if(sel){sel.value=hwId;renderGradingTable()}
+};
+
+// Grading view: select a homework, show student list with grade entry
+function renderHwGrading(c){
+  var hwList=state.homework;
+  c.innerHTML=`
+    <div class="filter-bar">
+      <select class="select" id="gradeHwSelect" onchange="renderGradingTable()" style="min-width:280px">
+        <option value="">— 选择作业进行评级 —</option>
+        ${hwList.map(function(h){return'<option value="'+h.id+'">'+escapeHtml(h.title)+' · '+escapeHtml(h.class||'')+' · '+formatDate(h.assignedDate)+'</option>'}).join('')}
+      </select>
+      <button class="btn btn-outline" onclick="importDocument('hwGrades')">${icon('upload',14)} 导入评级表</button>
+      <span class="note">A=+3分　B=+2分　C=+1分　D=+0分　F=-1分</span>
+    </div>
+    <div id="gradingTableWrap"></div>
+  `;
+  renderGradingTable();
+}
+window.renderGradingTable=function(){
+  var wrap=$('#gradingTableWrap');
+  if(!wrap)return;
+  var hwId=$('#gradeHwSelect')?$('#gradeHwSelect').value:'';
+  if(!hwId){wrap.innerHTML='<div class="empty"><div class="ei">'+icon('homework',48)+'</div>请在上方选择一项作业进行评级</div>';return}
+  var h=state.homework.find(function(x){return x.id===hwId});
+  if(!h){wrap.innerHTML='<div class="empty">作业不存在</div>';return}
+  var subs=h.submissions||[];
+  var graded=subs.filter(function(s){return s.grade}).length;
+  var rate=subs.length?Math.round(graded/subs.length*100):0;
+  var gradeCount={A:0,B:0,C:0,D:0,F:0};
+  subs.forEach(function(s){if(s.grade)gradeCount[s.grade]++});
+  wrap.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('students',20)}</div><div class="stat-label">应评人数</div><div class="stat-value" style="color:var(--blue)">${subs.length}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#E8F8EC;color:var(--green)">${icon('todos',20)}</div><div class="stat-label">已评人数</div><div class="stat-value" style="color:var(--green)">${graded}</div><div class="stat-sub">评级率 ${rate}%</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('trend_up',20)}</div><div class="stat-label">A级</div><div class="stat-value" style="color:#34C759">${gradeCount.A}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('trend_up',20)}</div><div class="stat-label">B级</div><div class="stat-value" style="color:var(--blue)">${gradeCount.B}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FFF3E0;color:var(--orange)">${icon('clock',20)}</div><div class="stat-label">C级</div><div class="stat-value" style="color:var(--orange)">${gradeCount.C}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FFF0F0;color:var(--red)">${icon('flame',20)}</div><div class="stat-label">F级</div><div class="stat-value" style="color:var(--red)">${gradeCount.F}</div></div>
+    </div>
+    <div class="tbl" style="margin-top:16px">
+      <table>
+        <thead><tr><th>序号</th><th>学生姓名</th><th>学号</th><th>班级</th><th>等级</th><th>积分</th><th>操作</th></tr></thead>
+        <tbody id="gradingBody"></tbody>
+      </table>
+    </div>
+  `;
+  var tbody=$('#gradingBody');
+  if(!subs.length){tbody.innerHTML='<tr><td colspan="7"><div class="empty">暂无学生数据</div></td></tr>';return}
+  tbody.innerHTML=subs.map(function(sub,idx){
+    var stu=state.students.find(function(s){return s.id===sub.studentId});
+    if(!stu)return'';
+    var g=sub.grade||'';
+    var pts=GRADE_POINTS[g];
+    var gradeTag=g?'<span class="tag" style="background:'+GRADE_BG[g]+';color:'+GRADE_COLORS[g]+';font-weight:700">'+g+'</span>':'<span style="color:var(--text3)">未评</span>';
+    var ptsStr=g!=null&&g!==''?'<span style="color:'+(pts>=0?'var(--green)':'var(--red)')+';font-weight:600">'+(pts>=0?'+':'')+pts+'</span>':'—';
+    return '<tr><td>'+(idx+1)+'</td><td style="font-weight:600">'+escapeHtml(stu.name)+'</td><td>'+(stu.studentId||'')+'</td><td>'+(stu.class||'')+'</td><td>'+gradeTag+'</td><td>'+ptsStr+'</td><td><button class="btn btn-sm btn-primary" onclick="openGradeInput(\''+h.id+'\',\''+sub.studentId+'\')">评级</button></td></tr>';
+  }).join('');
+}
+// Click student name to input grade
+window.openGradeInput=function(hwId,studentId){
+  var h=state.homework.find(function(x){return x.id===hwId});
+  if(!h)return;
+  var sub=(h.submissions||[]).find(function(s){return s.studentId===studentId});
+  var stu=state.students.find(function(s){return s.id===studentId});
+  if(!stu)return;
+  var currentGrade=sub?sub.grade||'':'';
+  showModal(`
+    <div class="modal-title">评级 — ${escapeHtml(stu.name)}</div>
+    <div class="note">作业：${escapeHtml(h.title)} · ${escapeHtml(h.class||'')}</div>
+    <div style="display:flex;gap:12px;margin:20px 0;flex-wrap:wrap">
+      ${['A','B','C','D','F'].map(function(g){
+        return '<div onclick="selectGrade(\''+g+'\')" id="gradeBtn_'+g+'" style="cursor:pointer;width:64px;height:64px;border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid '+(currentGrade===g?GRADE_COLORS[g]:'var(--border)')+';background:'+(currentGrade===g?GRADE_BG[g]:'#fff')+';transition:all .2s"><div style="font-size:24px;font-weight:700;color:'+(currentGrade===g?GRADE_COLORS[g]:'var(--text2)')+'">'+g+'</div><div style="font-size:11px;color:var(--text3);margin-top:2px">'+(GRADE_POINTS[g]>=0?'+'+GRADE_POINTS[g]:GRADE_POINTS[g])+'分</div></div>';
+      }).join('')}
+    </div>
+    <input type="hidden" id="selectedGrade" value="${currentGrade}">
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">取消</button>
+      <button class="btn btn-outline" onclick="clearGrade('${hwId}','${studentId}')">清除</button>
+      <button class="btn btn-primary" onclick="saveGrade('${hwId}','${studentId}')">保存</button>
+    </div>
+  `);
+};
+window.selectGrade=function(g){
+  document.getElementById('selectedGrade').value=g;
+  ['A','B','C','D','F'].forEach(function(x){
+    var el=document.getElementById('gradeBtn_'+x);
+    if(el){
+      if(x===g){
+        el.style.borderColor=GRADE_COLORS[x];
+        el.style.background=GRADE_BG[x];
+        el.querySelector('div').style.color=GRADE_COLORS[x];
+      }else{
+        el.style.borderColor='var(--border)';
+        el.style.background='#fff';
+        el.querySelector('div').style.color='var(--text2)';
+      }
     }
   });
-  exportExcel(rows,'作业管理数据');
+};
+window.clearGrade=function(hwId,studentId){
+  var h=state.homework.find(function(x){return x.id===hwId});
+  if(!h)return;
+  var sub=(h.submissions||[]).find(function(s){return s.studentId===studentId});
+  if(sub)sub.grade='';
+  saveState();
+  closeModal();
+  renderGradingTable();
+  toast('已清除等级');
+};
+window.saveGrade=function(hwId,studentId){
+  var g=document.getElementById('selectedGrade').value;
+  if(!g){toast('请选择一个等级');return}
+  var h=state.homework.find(function(x){return x.id===hwId});
+  if(!h)return;
+  if(!h.submissions)h.submissions=[];
+  var sub=h.submissions.find(function(s){return s.studentId===studentId});
+  if(sub)sub.grade=g;
+  else h.submissions.push({studentId:studentId,grade:g});
+  saveState();
+  closeModal();
+  renderGradingTable();
+  toast(stu_name(studentId)+' 评级：'+g+' '+(GRADE_POINTS[g]>=0?'+':'')+GRADE_POINTS[g]+'分');
+};
+function stu_name(id){
+  var s=state.students.find(function(x){return x.id===id});
+  return s?s.name:'';
+}
+// AI-assisted grade import from table data
+window.importHwGrades=function(input){
+  var file=input.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var data=new Uint8Array(e.target.result);
+      var wb=XLSX.read(data,{type:'array'});
+      var ws=wb.Sheets[wb.SheetNames[0]];
+      var json=XLSX.utils.sheet_to_json(ws);
+      var hwId=$('#gradeHwSelect')?$('#gradeHwSelect').value:'';
+      if(!hwId){toast('请先选择要导入评级的作业');return}
+      var h=state.homework.find(function(x){return x.id===hwId});
+      if(!h){toast('作业不存在');return}
+      if(!h.submissions)h.submissions=state.students.map(function(s){return{studentId:s.id,grade:''}});
+      var count=0;
+      json.forEach(function(row){
+        var name=row['姓名']||row['学生姓名']||'';
+        var grade=(row['等级']||row['评级']||'').toString().toUpperCase().charAt(0);
+        if(!name||!grade)return;
+        if(['A','B','C','D','F'].indexOf(grade)<0)return;
+        var stu=state.students.find(function(s){return s.name===name});
+        if(!stu)return;
+        var sub=h.submissions.find(function(s){return s.studentId===stu.id});
+        if(sub){sub.grade=grade;count++}
+      });
+      saveState();
+      renderGradingTable();
+      toast('AI导入成功，共匹配'+count+'条评级');
+    }catch(err){toast('导入失败：'+err.message)}
+  };
+  reader.readAsArrayBuffer(file);
+};
+// Ranking view: total points per student, ranked high to low
+function renderHwRanking(c){
+  var studentScores=state.students.map(function(s){
+    var total=0,graded=0;
+    state.homework.forEach(function(h){
+      var sub=(h.submissions||[]).find(function(x){return x.studentId===s.id});
+      if(sub&&sub.grade){total+=GRADE_POINTS[sub.grade]||0;graded++}
+    });
+    return{student:s,total:total,graded:graded,avg:graded?(total/graded).toFixed(1):'—'};
+  });
+  studentScores.sort(function(a,b){return b.total-a.total});
+  var maxScore=studentScores.length?studentScores[0].total:0;
+  var allGraded=studentScores.filter(function(x){return x.graded>0}).length;
+  c.innerHTML=`
+    <div class="filter-bar">
+      <select class="select" id="rankClassFilter" onchange="renderRankingTable()" style="min-width:120px">
+        <option value="">全部班级</option>
+        <option value="1班">1班</option>
+        <option value="2班">2班</option>
+      </select>
+      <button class="btn btn-outline" onclick="exportRankingExcel()">${icon('download',14)} 导出排名</button>
+      <span class="note">A=+3分　B=+2分　C=+1分　D=+0分　F=-1分　|　已参与评级学生：${allGraded}人</span>
+    </div>
+    <div id="rankingWrap"></div>
+  `;
+  renderRankingTable();
+}
+window.renderRankingTable=function(){
+  var wrap=$('#rankingWrap');
+  if(!wrap)return;
+  var classFilter=$('#rankClassFilter')?$('#rankClassFilter').value:'';
+  var studentScores=state.students.filter(function(s){return!classFilter||s.class===classFilter}).map(function(s){
+    var total=0,graded=0;
+    var detail=[];
+    state.homework.forEach(function(h){
+      var sub=(h.submissions||[]).find(function(x){return x.studentId===s.id});
+      if(sub&&sub.grade){total+=GRADE_POINTS[sub.grade]||0;graded++;detail.push(sub.grade)}
+    });
+    return{student:s,total:total,graded:graded,detail:detail};
+  });
+  studentScores.sort(function(a,b){return b.total-a.total});
+  if(!studentScores.length){wrap.innerHTML='<div class="empty"><div class="ei">'+icon('students',48)+'</div>暂无学生数据</div>';return}
+  var maxScore=studentScores[0].total;
+  wrap.innerHTML=`
+    <div class="tbl">
+      <table>
+        <thead><tr><th style="width:60px">排名</th><th>学生姓名</th><th>学号</th><th>班级</th><th>已评次数</th><th>各次等级</th><th style="width:120px">积分进度</th><th>总积分</th></tr></thead>
+        <tbody>
+          ${studentScores.map(function(item,idx){
+            var rank=idx+1;
+            var medal=rank<=3;
+            var medalColor=rank===1?'#FF9500':(rank===2?'#86868B':'#FF9500');
+            var rankStyle=rank<=3?'font-size:18px':'';
+            var rankDisplay=medal?'<span style="display:inline-flex;width:28px;height:28px;border-radius:50%;align-items:center;justify-content:center;background:'+medalColor+';color:#fff;font-size:14px;font-weight:700">'+rank+'</span>':'<span style="color:var(--text2)">'+rank+'</span>';            var barWidth=maxScore>0?Math.max(0,(item.total/maxScore*100)):0;
+            var barColor=item.total>=0?'var(--green)':'var(--red)';
+            var detailHtml=item.detail.length?item.detail.map(function(g){
+              return'<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700;background:'+GRADE_BG[g]+';color:'+GRADE_COLORS[g]+';margin-right:2px">'+g+'</span>';
+            }).join(''):'<span style="color:var(--text3)">未参与</span>';
+            return '<tr><td style="'+rankStyle+';text-align:center">'+rankDisplay+'</td><td style="font-weight:600">'+escapeHtml(item.student.name)+'</td><td>'+(item.student.studentId||'')+'</td><td>'+(item.student.class||'')+'</td><td>'+item.graded+'</td><td>'+detailHtml+'</td><td><div class="progress" style="width:100px"><span style="width:'+barWidth+'%;background:'+barColor+'"></span></div></td><td style="font-size:18px;font-weight:700;color:'+(item.total>=0?'var(--green)':'var(--red)')+'">'+(item.total>=0?'+':'')+item.total+'</td></tr>';
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+window.exportRankingExcel=function(){
+  if(!state.students.length){toast('暂无数据');return}
+  var classFilter=$('#rankClassFilter')?$('#rankClassFilter').value:'';
+  var data=state.students.filter(function(s){return!classFilter||s.class===classFilter}).map(function(s){
+    var total=0,graded=0;
+    state.homework.forEach(function(h){
+      var sub=(h.submissions||[]).find(function(x){return x.studentId===s.id});
+      if(sub&&sub.grade){total+=GRADE_POINTS[sub.grade]||0;graded++}
+    });
+    return{'姓名':s.name,'学号':s.studentId,'班级':s.class,'已评次数':graded,'总积分':total};
+  });
+  data.sort(function(a,b){return b['总积分']-a['总积分']});
+  data.forEach(function(d,i){d['排名']=i+1});
+  data.sort(function(a,b){return a['排名']-b['排名']});
+  exportExcel(data,'作业积分排名');
+};
+
+window.exportHwExcel=function(){
+  if(!state.homework.length){toast('暂无数据');return}
+  var rows=[];
+  state.homework.forEach(function(h){
+    var subs=h.submissions||[];
+    subs.forEach(function(sub){
+      var stu=state.students.find(function(s){return s.id===sub.studentId});
+      rows.push({
+        '作业标题':h.title,'类型':{base:'基础',advanced:'提升',exam:'中考专项'}[h.type]||h.type,
+        '章节':h.chapter,'班级':h.class,'布置日期':h.assignedDate,'截止日期':h.dueDate,
+        '学生姓名':stu?stu.name:'','学号':stu?stu.studentId:'','等级':sub.grade||'','积分':GRADE_POINTS[sub.grade]||0
+      });
+    });
+  });
+  exportExcel(rows,'作业评级数据');
 };
 window.importHwExcel=function(input){
   var file=input.files[0];
@@ -1219,13 +1495,15 @@ window.importHwExcel=function(input){
       var ws=wb.Sheets[wb.SheetNames[0]];
       var json=XLSX.utils.sheet_to_json(ws);
       json.forEach(function(row){
+        var stu=state.students.find(function(s){return s.name===(row['学生姓名']||row['姓名']||'')});
+        if(!stu)return;
         state.homework.push({
           id:uid(),
           title:row['作业标题']||'',
           type:{'基础':'base','提升':'advanced','中考专项':'exam'}[row['类型']]||'base',
           chapter:row['章节']||'',class:row['班级']||'',
           assignedDate:row['布置日期']||todayStr(),dueDate:row['截止日期']||todayStr(),
-          submissions:state.students.map(function(s){return{studentId:s.id,completed:false,score:''}})
+          submissions:state.students.map(function(s){return{studentId:s.id,grade:s.id===stu.id?(row['等级']||''):''}})
         });
       });
       saveState();
@@ -1542,7 +1820,15 @@ window.toggleTodo=function(id){var t=state.todos.find(function(x){return x.id===
 
 /* ===== Students ===== */
 function renderStudents(c){
+  var classCount={};
+  state.students.forEach(function(s){classCount[s.class]=(classCount[s.class]||0)+1});
   c.innerHTML=`
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-icon" style="background:var(--blue-bg);color:var(--blue)">${icon('students',20)}</div><div class="stat-label">总人数</div><div class="stat-value" style="color:var(--blue)">${state.students.length}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#E8F8EC;color:var(--green)">${icon('class2',20)}</div><div class="stat-label">1班人数</div><div class="stat-value" style="color:var(--green)">${classCount['1班']||0}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#F0EDFF;color:var(--purple)">${icon('class2',20)}</div><div class="stat-label">2班人数</div><div class="stat-value" style="color:var(--purple)">${classCount['2班']||0}</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FFF3E0;color:var(--orange)">${icon('target',20)}</div><div class="stat-label">培优人数</div><div class="stat-value" style="color:var(--orange)">${state.students.filter(function(s){return s.level==='培优'}).length}</div></div>
+    </div>
     <div class="filter-bar">
       <button class="btn btn-primary" onclick="showStudentModal()">+ 添加学生</button>
       <button class="btn btn-outline" onclick="exportStudentsExcel()">${icon('download',14)} 导出名单</button>
@@ -1550,8 +1836,23 @@ function renderStudents(c){
       <input type="text" class="input" id="stuSearch" placeholder="搜索学生..." oninput="renderStudentGrid()" style="min-width:200px">
     </div>
     <div class="student-grid" id="stuGrid"></div>
+    <div class="card" style="margin-top:16px">
+      <div class="card-title">${icon('pie',16)} 班级成绩分布</div>
+      <div class="chart-wrap"><canvas id="rosterChart"></canvas></div>
+    </div>
   `;
   renderStudentGrid();
+  // Render distribution chart
+  var ctx=document.getElementById('rosterChart');
+  if(ctx){
+    ctx=ctx.getContext('2d');
+    var exams=state.exams.filter(function(e){return e.scores&&e.scores.length});
+    var ranges={'90-100':0,'80-89':0,'70-79':0,'60-69':0,'<60':0};
+    exams.forEach(function(e){
+      e.scores.forEach(function(s){var sc=parseFloat(s.score)||0;if(sc>=90)ranges['90-100']++;else if(sc>=80)ranges['80-89']++;else if(sc>=70)ranges['70-79']++;else if(sc>=60)ranges['60-69']++;else ranges['<60']++});
+    });
+    chartInstances.roster=new Chart(ctx,{type:'bar',data:{labels:Object.keys(ranges),datasets:[{label:'人数',data:Object.values(ranges),backgroundColor:['#34C759','#007AFF','#5AC8FA','#FF9500','#FF3B30'],borderRadius:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,stepSize:1}}}});
+  }
 }
 function renderStudentGrid(){
   var kw=($('#stuSearch')?$('#stuSearch').value:'').trim();
@@ -1966,8 +2267,10 @@ function init(){
     state.exams.push({id:uid(),name:'第一单元测试',type:'unit',date:todayStr(),class:'1班',scores:state.students.map(function(s){return{studentId:s.id,score:Math.floor(Math.random()*30+70)}}),knowledgePoints:'修辞手法:5,文言文:7,作文:9'});
   }
   if(!state.homework.length){
-    state.homework.push({id:uid(),title:'第一课生字词抄写',type:'base',chapter:'第一单元',class:'1班',assignedDate:todayStr(),dueDate:todayStr(),submissions:state.students.map(function(s){return{studentId:s.id,completed:Math.random()>0.2,score:''}})});
-    state.homework.push({id:uid(),title:'《草原》阅读理解',type:'advanced',chapter:'第一单元',class:'1班',assignedDate:todayStr(),dueDate:todayStr(),submissions:state.students.map(function(s){return{studentId:s.id,completed:Math.random()>0.3,score:''}})});
+    var grades1=['A','B','B','C','A','B','C','D','A','B','C','B','A','C','F'];
+    var grades2=['B','C','A','B','C','D','B','A','C','B','D','C','B','A','C'];
+    state.homework.push({id:uid(),title:'第一课生字词抄写',type:'base',chapter:'第一单元',class:'1班',assignedDate:todayStr(),dueDate:todayStr(),submissions:state.students.map(function(s,i){return{studentId:s.id,grade:grades1[i]||''}})});
+    state.homework.push({id:uid(),title:'《草原》阅读理解',type:'advanced',chapter:'第一单元',class:'1班',assignedDate:todayStr(),dueDate:todayStr(),submissions:state.students.map(function(s,i){return{studentId:s.id,grade:grades2[i]||''}})});
   }
   if(!state.todos.length){
     state.todos.push({id:uid(),title:'准备第二单元课件',type:'备课',date:todayStr(),completed:false});
